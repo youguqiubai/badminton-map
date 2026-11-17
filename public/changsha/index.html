@@ -8,14 +8,28 @@
 <title>长沙行程 · 实时调整</title>
 <style>
 :root{
-  --bg:#F7F4EE; --card:#fff; --ink:#1F1D1A; --ink2:#57524C; --ink3:#928B82;
-  --line:#E4DED3; --red:#B33A2B; --red2:#FBEFEC; --amber:#A9701B; --amber2:#FBF3E3;
+  --bg:#F7F4EE; --card:#fff; --card2:#FCFAF6; --card3:#FAF7F1;
+  --tint:#FAFCF9; --tint2:#FEFAF7; --tint3:#FBF9F5; --press:#F2EDE4;
+  --ink:#1F1D1A; --ink2:#57524C; --ink3:#928B82;
+  --line:#E4DED3; --line2:#F1ECE3;
+  --red:#B33A2B; --red2:#FBEFEC; --amber:#A9701B; --amber2:#FBF3E3;
   --green:#3F6B4A; --green2:#EDF3EE; --blue:#2F5C8A; --blue2:#EBF1F7;
+  --here:#1F4E79; --mapbg:#EFEAE1;
 }
+body.dark{
+  --bg:#141312; --card:#1F1D1B; --card2:#242220; --card3:#262421;
+  --tint:#1A211B; --tint2:#241E19; --tint3:#1A1917; --press:#2C2925;
+  --ink:#EDE8E0; --ink2:#B4ADA3; --ink3:#847D73;
+  --line:#35312C; --line2:#2B2825;
+  --red:#E07A6A; --red2:#3B2420; --amber:#D9A452; --amber2:#33291A;
+  --green:#87B694; --green2:#1E2A22; --blue:#89AFD4; --blue2:#1B2530;
+  --here:#6FA8DC; --mapbg:#242220;
+}
+body.dark{color-scheme:dark}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;
   font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
-  padding-bottom:40px}
+  padding-bottom:96px}
 
 .bar{position:sticky;top:0;z-index:20;background:var(--red);color:#fff;padding:12px 16px 13px;
   box-shadow:0 2px 12px rgba(120,40,30,.18)}
@@ -52,7 +66,7 @@ select option{color:#1F1D1A;background:#fff}
 
 .wrap{padding:14px 14px 0;max-width:720px;margin:0 auto}
 .sec-t{font-size:12.5px;color:var(--ink3);letter-spacing:.08em;margin:16px 2px 8px;font-weight:600}
-.wx{padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:10px;margin-bottom:10px;
+.wx{padding:9px 12px;border:1px solid var(--line);background:var(--card);border-radius:10px;margin-bottom:10px;
   font-size:12.5px;color:var(--ink2);line-height:1.65;transition:.2s}
 .wx b{color:var(--ink);font-weight:600}
 .wx .dim,.wx .dry{color:var(--ink3)}
@@ -61,7 +75,7 @@ select option{color:#1F1D1A;background:#fff}
 .wx.raining{background:var(--blue2);border-color:#D6E2EF}
 
 .feed{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
-.row{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid #F1ECE3;position:relative}
+.row{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid var(--line2);position:relative}
 .row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
 .row.st-ok::before{background:#C0574A}
 .row.st-done::before{background:#7FA98A}
@@ -81,7 +95,7 @@ select option{color:#1F1D1A;background:#fff}
 .tag.a{background:var(--amber2);color:var(--amber)}
 .tag.r{background:var(--red2);color:var(--red)}
 .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center}
-.acts button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:7px;
+.acts button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:7px;
   padding:5px 11px;font-size:12px;font-family:inherit;cursor:pointer;transition:.15s}
 .acts button:active{transform:scale(.97)}
 .acts button.ok{border-color:#BFD3C4;color:var(--green)}
@@ -90,33 +104,33 @@ select option{color:#1F1D1A;background:#fff}
 .acts button.no.on{background:var(--red);color:#fff;border-color:var(--red)}
 .delay{display:flex;gap:5px;align-items:center;margin-top:7px;flex-wrap:wrap}
 .delay span{font-size:11px;color:var(--ink3);margin-right:1px}
-.delay button{border:1px solid var(--line);background:#FCFAF6;color:var(--ink3);border-radius:6px;
+.delay button{border:1px solid var(--line);background:var(--card2);color:var(--ink3);border-radius:6px;
   padding:3px 8px;font-size:11px;font-family:inherit;cursor:pointer;line-height:1.5}
-.delay button:active{background:#F2EDE4}
+.delay button:active{background:var(--press)}
 .delay button.clr{color:var(--amber);border-color:#EADCC0}
 .navbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
   background:var(--red);color:#fff;border:1px solid var(--red);border-radius:7px;
   padding:5px 12px;font-size:12px;line-height:1.4;font-weight:500}
-.navbtn.g{background:#fff;color:var(--ink2);border-color:var(--line);font-weight:400}
+.navbtn.g{background:var(--card);color:var(--ink2);border-color:var(--line);font-weight:400}
 .geo{background:var(--green2)!important;color:var(--green)!important;margin-right:0!important;
   padding:1px 6px;border-radius:20px;font-size:10.5px}
 .geo.ap{background:var(--amber2)!important;color:var(--amber)!important}
 
-.mapcard{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff;margin-bottom:2px}
-#map{height:290px;width:100%;position:relative;background:#EFEAE1}
+.mapcard{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--card);margin-bottom:2px}
+#map{height:290px;width:100%;position:relative;background:var(--mapbg)}
 .mapnoset{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
-  align-items:center;text-align:center;padding:22px;gap:6px;background:#FCFAF6}
+  align-items:center;text-align:center;padding:22px;gap:6px;background:var(--card2)}
 .mapnoset b{font-size:13.5px}
 .mapnoset span{font-size:11.5px;color:var(--ink3);line-height:1.7}
 .mapnoset .khelp{font-size:12px;color:var(--red);text-decoration:none;border-bottom:1px dashed #D8B9B3;
   padding-bottom:1px}
 .mapnoset input{width:88%;max-width:320px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;
-  font-size:12.5px;font-family:inherit;background:#fff}
+  font-size:12.5px;font-family:inherit;background:var(--card);color:var(--ink)}
 .mapnoset button{margin-top:4px;border:1px solid var(--red);background:var(--red);color:#fff;
   border-radius:8px;padding:7px 16px;font-size:13px;font-family:inherit;cursor:pointer}
-.mapbar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-top:1px solid var(--line);background:#FAF7F1}
+.mapbar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-top:1px solid var(--line);background:var(--card3)}
 .mapbar span{font-size:11.5px;color:var(--ink3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mapbar button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:6px;
+.mapbar button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:6px;
   padding:3px 9px;font-size:11.5px;font-family:inherit;cursor:pointer;white-space:nowrap}
 
 /* 地图气泡里的序号标记 */
@@ -126,46 +140,46 @@ select option{color:#1F1D1A;background:#fff}
 .mk.done{background:var(--green)}
 .mk.skip{background:#B9B2A7}
 .mk.dead{background:var(--amber)}
-.mk.me{background:#1F4E79;font-size:11px;box-shadow:0 0 0 4px rgba(31,78,121,.2),0 1px 5px rgba(0,0,0,.3)}
-.mk.here{background:#1F4E79;box-shadow:0 0 0 4px rgba(31,78,121,.22),0 1px 5px rgba(0,0,0,.3)}
+.mk.me{background:var(--here);font-size:11px;box-shadow:0 0 0 4px rgba(31,78,121,.2),0 1px 5px rgba(0,0,0,.3)}
+.mk.here{background:var(--here);box-shadow:0 0 0 4px rgba(31,78,121,.22),0 1px 5px rgba(0,0,0,.3)}
 
 /* 高德信息窗体 */
 .iw{padding:2px 2px 0;font-size:12.5px;line-height:1.6;min-width:130px}
 .iw b{font-size:13.5px;display:block;margin-bottom:2px}
-.iw .d{color:#857E74;font-size:11.5px}
-.iw a{display:inline-block;margin-top:7px;background:#B33A2B;color:#fff;text-decoration:none;
+.iw .d{color:var(--ink3);font-size:11.5px}
+.iw a{display:inline-block;margin-top:7px;background:var(--red);color:#fff;text-decoration:none;
   border-radius:6px;padding:4px 11px;font-size:12px}
 .amap-info-content{padding:10px 12px !important;border-radius:10px !important}
 
-.row.done{background:#FAFCF9}
+.row.done{background:var(--tint)}
 .row.done h4{color:var(--ink3);text-decoration:line-through}
 .row.done .t{color:var(--green)}
 .row.skip{opacity:.5}
 .notice{padding:10px 14px;background:var(--amber2);color:var(--amber);font-size:12px;line-height:1.7;
   border-bottom:1px solid #F0E4CB}
-.notice button{margin-left:6px;border:1px solid #E4D3B4;background:#fff;color:var(--amber);
+.notice button{margin-left:6px;border:1px solid #E4D3B4;background:var(--card);color:var(--amber);
   border-radius:6px;padding:3px 8px;font-size:11.5px;font-family:inherit;cursor:pointer}
-.row.past{opacity:.55;background:#FBF9F5}
+.row.past{opacity:.55;background:var(--tint3)}
 .row.past h4{color:var(--ink3)}
 .row.past .t{color:var(--ink3)}
 .row.skip h4{text-decoration:line-through}
-.row.late{background:#FEFAF7}
+.row.late{background:var(--tint2)}
 .row.late .t{color:var(--amber)}
 .row .warn{font-size:11.5px;color:var(--red);margin-top:5px}
 
 .reco{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
-.reco .head{padding:12px 14px;background:#FAF7F1;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2)}
+.reco .head{padding:12px 14px;background:var(--card3);border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2)}
 .reco .head b{color:var(--red);font-variant-numeric:tabular-nums}
 .reco .head .dim{font-size:11.5px;color:var(--ink3)}
-.hero{padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#FFFBF6,#fff)}
+.hero{padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--card2),var(--card))}
 .hero .hk{font-size:11.5px;color:var(--red);font-weight:600;letter-spacing:.04em;margin-bottom:5px}
 .hero h4{font-size:17px;font-weight:600;line-height:1.35}
 .hero p{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.65}
 .hero p.dim{color:var(--ink3);font-size:11.5px}
 .hero .acts{margin-top:10px}
-.sub{padding:9px 14px 3px;font-size:11.5px;color:var(--ink3);letter-spacing:.05em;background:#FCFAF6;
-  border-bottom:1px solid #F1ECE3}
-.rc{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid #F1ECE3;align-items:flex-start}
+.sub{padding:9px 14px 3px;font-size:11.5px;color:var(--ink3);letter-spacing:.05em;background:var(--card2);
+  border-bottom:1px solid var(--line2)}
+.rc{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid var(--line2);align-items:flex-start}
 .rc:last-child{border-bottom:none}
 .rc .n{flex:0 0 20px;height:20px;border-radius:50%;background:var(--red2);color:var(--red);
   font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
@@ -174,16 +188,37 @@ select option{color:#1F1D1A;background:#fff}
 .rc p{font-size:11.5px;color:var(--ink3);margin-top:2px;line-height:1.6}
 .rc p.dim{color:#A9A29A}
 .rc.dim{opacity:.62}
-.rc.dim .n{background:#F0EDE7;color:var(--ink3)}
-.rc button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:7px;
+.rc.dim .n{background:var(--line2);color:var(--ink3)}
+.rc button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:7px;
   padding:5px 10px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;margin-left:8px}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;gap:10px;
+  padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+  background:var(--card);border-top:1px solid var(--line);box-shadow:0 -2px 16px rgba(0,0,0,.10);
+  transform:translateY(112%);transition:transform .22s ease}
+.dock.on{transform:none}
+.dk-t{font-size:15px;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.dk-b{flex:1;min-width:0;line-height:1.35}
+.dk-b b{display:block;font-size:13.5px;font-weight:600;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk-b span{font-size:11px;color:var(--ink3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk-nav{flex:0 0 auto;background:var(--red);color:#fff;text-decoration:none;border-radius:8px;
+  padding:9px 15px;font-size:13px;font-weight:600;white-space:nowrap}
+
+.foldbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 14px;
+  background:var(--card2);border-bottom:1px solid var(--line2);font-size:12px;color:var(--ink3);cursor:pointer}
+.foldbar b{color:var(--red);font-weight:600;margin-left:8px}
+.fb-acts{display:flex;align-items:center;flex:0 0 auto}
+.fb-acts button{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+  border-radius:6px;padding:3px 8px;font-size:11.5px;font-family:inherit;cursor:pointer}
 
 .empty{padding:26px 14px;text-align:center;color:var(--ink3);font-size:13px}
 .summary{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.85}
 .summary b{color:var(--ink)}
 .summary .dim{color:var(--ink3);font-size:12px}
-.reset.share{border-color:#C8D3C9;color:var(--green);background:#FBFDFB;margin-bottom:8px}
-.reset{border:1px solid var(--line);background:#fff;color:var(--ink3);border-radius:8px;
+.reset.share{border-color:#C8D3C9;color:var(--green);background:var(--card2);margin-bottom:8px}
+.reset.theme{margin-top:0;margin-bottom:16px}
+.reset{border:1px solid var(--line);background:var(--card);color:var(--ink3);border-radius:8px;
   padding:8px 14px;font-size:12.5px;font-family:inherit;width:100%;margin-top:16px;cursor:pointer}
 footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padding:0 20px;line-height:1.8}
 </style>
@@ -231,12 +266,22 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
   <div class="summary" id="summary"></div>
 
   <button class="reset share" id="share">把当前进度发给另一个人</button>
+  <button class="reset theme" id="themebtn">外观 · 跟随系统</button>
   <button class="reset" id="reset">重置今天的操作</button>
   <footer>推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵。<br>
   点顶部大时间可以切到「某一刻」演练，提前看那个点该去哪。点「到了」记为已完成，点「跳过」移除，后面的时间和推荐立刻重算。<br>
   雨天会自动把户外项标出来，并给一个就近的室内替代（可还原）。<br>
   天气来自 wttr.in，免费只给 3 天，出发后每天打开就能看到当天。<br>
   地图的高德 Key 只存在这台手机的浏览器里，页面源码中没有；点行程行可以让地图定位到那个点。数据只存在本机。</footer>
+</div>
+
+<div class="dock" id="dock">
+  <div class="dk-t" id="dockT">--:--</div>
+  <div class="dk-b">
+    <b id="dockN">—</b>
+    <span id="dockM"></span>
+  </div>
+  <a class="dk-nav" id="dockNav" href="#" target="_blank" rel="noopener">导航</a>
 </div>
 
 <script>
@@ -407,6 +452,33 @@ const POOL = [
   {name:'冬瓜山 · 口味虾',zone:'tianxin',dur:90,type:'吃',open:[1080,1440],slots:['latenight'],
    why:'21 点后才上人的夜宵一条街'}
 ];
+
+/* ---------- 外观 ---------- */
+const THEME_KEY = 'cs_theme_v1';
+let theme = (function(){ try{ return localStorage.getItem(THEME_KEY) || 'auto'; }catch(e){ return 'auto'; } })();
+
+function sysDark(){
+  return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+function isDark(){ return theme === 'dark' || (theme === 'auto' && sysDark()); }
+
+function applyTheme(){
+  const dark = isDark();
+  document.body.classList.toggle('dark', dark);
+  const btn = document.getElementById('themebtn');
+  if(btn) btn.textContent = theme === 'auto' ? '外观 · 跟随系统' : (theme === 'dark' ? '外观 · 深色' : '外观 · 浅色');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', dark ? '#141312' : '#B33A2B');
+  if(MAP.map && MAP.map.setMapStyle){
+    try{ MAP.map.setMapStyle(dark ? 'amap://styles/dark' : 'amap://styles/normal'); }catch(e){}
+  }
+}
+
+function cycleTheme(){
+  theme = theme === 'auto' ? 'light' : (theme === 'light' ? 'dark' : 'auto');
+  try{ localStorage.setItem(THEME_KEY, theme); }catch(e){}
+  applyTheme();
+}
 
 /* ---------- 状态 ---------- */
 const KEY = 'cs_trip_v2';
@@ -872,10 +944,8 @@ function renderLoc(){
 
 function renderFeed(plan){
   const el = document.getElementById('feed');
-  const pastN = plan.list.filter(x => x.stat==='past').length;
-  const notice = pastN ? `<div class="notice">有 ${pastN} 项原定时间已经过去、你还没打勾。默认当作没去，
-      <button data-act="alldone">这些其实都去了</button></div>` : '';
-  el.innerHTML = notice + plan.list.map(x => {
+
+  const rowHTML = function(x){
     const cls = (x.stat==='done'?'done':x.stat==='skip'?'skip':x.stat==='late'?'late'
               :x.stat==='past'?'past':'') + ' st-' + x.stat;
     const tags = [];
@@ -890,26 +960,30 @@ function renderFeed(plan){
         : '<span class="tag r" data-act="book" data-id="' + x.id + '">需预约·未约</span>');
     }
     if(x.pad > 0) tags.push('<span class="tag a">+' + x.pad + ' 分等待</span>');
+
     const btns = x.stat==='done' || x.stat==='skip' ? '' :
       `<button class="ok" data-act="done" data-id="${x.id}">到了</button>
        <button class="no" data-act="skip" data-id="${x.id}">跳过</button>`;
+
     const rwx = x.start != null ? rainWindow(state.day, x.start, x.dur) : null;
     const altIn = (rwx && rwx.rain >= 50) ? indoorAlt(x, x.start) : null;
     const wet = (rwx && x.outdoor && rwx.rain >= 50)
       ? '预报这个时段 ' + rwx.rain + '% 有雨' + (altIn ? '，可以换成「' + altIn.name + '」' : '，户外项建议改天')
       : '';
+
     let wetBtn = '';
     if(x.origName && x.stat !== 'done' && x.stat !== 'skip'){
       wetBtn = `<button data-act="revert" data-id="${x.id}">还原为${x.origName}</button>`;
     } else if(altIn && x.stat !== 'done' && x.stat !== 'skip'){
       wetBtn = `<button data-act="swap" data-id="${x.id}" data-alt="${altIn.name}">换成${altIn.name}</button>`;
     }
+
     const warn = (x.blocked || x.late || wet)
       ? `<div class="warn">${x.blocked || x.late || wet}</div>` : '';
     const move = (x.move && x.stat!=='done' && x.stat!=='skip' && x.stat!=='past') ? `<span>路程 ${x.move} 分</span>` : '';
-    const g = resolveGeo(x);
     const mode = (x.move && x.move > 0) ? 'bus' : 'walk';
     const modeCN = mode === 'bus' ? '公交' : '步行';
+
     const movable = x.stat !== 'done' && x.stat !== 'skip' && x.stat !== 'past';
     const delay = movable ? `<div class="delay">
         <span>延后</span>
@@ -918,20 +992,52 @@ function renderFeed(plan){
         <button data-act="delay" data-id="${x.id}" data-min="60">+1h</button>
         ${x.pad > 0 ? `<button data-act="delay" data-id="${x.id}" data-min="${-x.pad}" class="clr">清零</button>` : ''}
       </div>` : '';
-    const navBtns = `<div class="acts">
-      <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
-      ${wetBtn}
-      ${btns}
-    </div>${delay}`;
+
     return `<div class="row ${cls}" data-id="${x.id}">
       <div class="t">${x.showT || x.t}</div>
       <div class="bod">
         <h4>${x.name}${tags.join('')}</h4>
         <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur}${x.pad ? '+' + x.pad : ''} 分</span>${move}</div>
-        ${warn}${navBtns}
+        ${warn}
+        <div class="acts">
+          <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
+          ${wetBtn}${btns}
+        </div>
+        ${delay}
       </div>
     </div>`;
-  }).join('');
+  };
+
+  // 已结束的项折起来，别让它们占满屏幕
+  const isFold = function(x){ return x.stat==='past' || x.stat==='done' || x.stat==='skip'; };
+  const folded = plan.list.filter(isFold);
+  const active = plan.list.filter(function(x){ return !isFold(x); });
+  const unfold = !!state.unfold;
+
+  const cnt = {done:0, skip:0, past:0};
+  folded.forEach(function(x){ cnt[x.stat] = (cnt[x.stat]||0) + 1; });
+  const parts = [];
+  if(cnt.done) parts.push('已完成 ' + cnt.done);
+  if(cnt.past) parts.push('已过 ' + cnt.past);
+  if(cnt.skip) parts.push('跳过 ' + cnt.skip);
+
+  let html = '';
+  if(folded.length){
+    html += '<div class="foldbar">'
+      + '<span>' + parts.join(' · ') + '</span>'
+      + '<span class="fb-acts">'
+      + (cnt.past ? '<button data-act="alldone">都去了</button>' : '')
+      + '<b>' + (unfold ? '收起' : '展开') + '</b></span></div>';
+    if(unfold) html += folded.map(rowHTML).join('');
+  }
+  html += active.map(rowHTML).join('');
+  el.innerHTML = html;
+
+  const fb = el.querySelector('.foldbar');
+  if(fb) fb.onclick = function(ev){
+    if(ev.target.tagName === 'BUTTON') return;   // 「都去了」交给通用处理
+    state.unfold = !state.unfold; save(); renderFeed(lastPlan || plan);
+  };
 
   el.querySelectorAll('.tag[data-act="book"]').forEach(function(t){
     t.style.cursor = 'pointer';
@@ -1090,6 +1196,40 @@ function addToDay(p){
   save(); renderAll();
 }
 
+function renderDock(plan){
+  const el = document.getElementById('dock');
+  if(!el) return;
+  const next = plan.list.find(function(x){
+    return x.stat === 'ok' || x.stat === 'late' || x.stat === 'dead';
+  });
+  if(!next){ el.classList.remove('on'); return; }
+  el.classList.add('on');
+
+  document.getElementById('dockT').textContent = next.showT || next.t;
+  document.getElementById('dockN').textContent = next.name;
+
+  let meta = ZONE_CN[next.zone] + ' · ' + next.dur + (next.pad ? '+' + next.pad : '') + ' 分';
+  if(next.blocked) meta = next.blocked;
+  else if(next.start != null && plan.live){
+    const gap = next.start - nowMin();
+    meta = (gap > 2 ? '还有 ' + fmtDur(gap) : '就是现在') + ' · ' + meta;
+  }
+  document.getElementById('dockM').textContent = meta;
+
+  const m = (next.move && next.move > 0) ? 'bus' : 'walk';
+  const a = document.getElementById('dockNav');
+  a.href = navURL(next, m);
+  a.textContent = m === 'bus' ? '导航' : '导航';
+
+  el.onclick = function(ev){
+    if(ev.target === a) return;
+    state.unfold = 1; save();
+    if(lastPlan) renderFeed(lastPlan);
+    const row = document.querySelector('.row[data-id="' + next.id + '"]');
+    if(row) row.scrollIntoView({behavior:'smooth', block:'center'});
+  };
+}
+
 function renderSummary(plan){
   const {list, cursor, day, live} = plan;
   const left = list.filter(x => x.stat==='ok' || x.stat==='late');
@@ -1103,7 +1243,24 @@ function renderSummary(plan){
   if(!live) h += '<br><span class="dim">现在是按原计划顺序预演；点顶部时间可以切到「按某一刻走」，结果会跟真实时间走。</span>';
   const home = returnTip(plan);
   if(home) h += '<br>' + home;
+  const load = loadRatio(plan);
+  if(load > 0.82){
+    h += '<br><span style="color:#A9701B">这天排得偏满：活动和路程占了可用时间的 '
+      + Math.round(load*100) + '%，几乎没有缓冲。遇到排队就会一路往后压，可以砍掉一项。</span>';
+  }
   document.getElementById('summary').innerHTML = h;
+}
+
+// 当天排得有多满：活动 + 等待 + 路上，占可用时间的比例
+function loadRatio(plan){
+  const {list, day} = plan;
+  let act = 0;
+  list.forEach(function(x){
+    if(x.stat === 'skip') return;
+    act += x.dur + (x.pad || 0) + (x.move || 0);
+  });
+  const span = day.end - day.start;
+  return span > 0 ? act / span : 0;
 }
 
 // 收工回程：长沙地铁 23:00 前后末班，过了点只能打车
@@ -1575,7 +1732,8 @@ function renderAll(){
   const reco = recommend(plan);
   lastPlan = plan;
   renderClock();
-  renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco); renderSummary(plan);
+  renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco);
+  renderSummary(plan); renderDock(plan);
   if(MAP.map) renderMap(plan);
   document.getElementById('feedTitle').textContent = DAYS[state.day].date + ' 行程';
 }
@@ -1617,6 +1775,12 @@ initMap();  // 有 Key 才会真加载，没有就显示填写入口
 loadWX();   // 异步取天气，回来自己会重渲染
 
 document.getElementById('share').onclick = doShare;
+document.getElementById('themebtn').onclick = cycleTheme;
+if(window.matchMedia){
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if(mq.addEventListener) mq.addEventListener('change', function(){ if(theme === 'auto') applyTheme(); });
+}
+applyTheme();
 
 document.getElementById('reset').onclick = () => {
   state.done = {}; state.skip = {}; state.pad = {}; state.book = {};
@@ -1634,7 +1798,13 @@ if('serviceWorker' in navigator && window.isSecureContext){
 renderAll();
 
 let lastTick = -1;
+// 切回前台时补一次刷新，避免看到的是离开时的旧时间
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden){ renderClock(); if(state.clock == null) renderAll(); }
+});
+
 setInterval(function(){
+  if(document.hidden) return;          // 后台不跑，省电
   if(state.clock != null) return;      // 演练模式不跟真实时间
   const m = nowMin();
   if(m === lastTick) return;
