@@ -57,6 +57,7 @@ select option{color:#1F1D1A;background:#fff}
 .wx b{color:var(--ink);font-weight:600}
 .wx .dim,.wx .dry{color:var(--ink3)}
 .wx .wet{display:inline-block;margin-left:6px;color:var(--blue);font-weight:500}
+.wx .wear{display:block;margin-top:2px;color:var(--ink3)}
 .wx.raining{background:var(--blue2);border-color:#D6E2EF}
 
 .feed{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
@@ -87,6 +88,12 @@ select option{color:#1F1D1A;background:#fff}
 .acts button.ok.on{background:var(--green);color:#fff;border-color:var(--green)}
 .acts button.no{border-color:#EFD3CE;color:var(--red)}
 .acts button.no.on{background:var(--red);color:#fff;border-color:var(--red)}
+.delay{display:flex;gap:5px;align-items:center;margin-top:7px;flex-wrap:wrap}
+.delay span{font-size:11px;color:var(--ink3);margin-right:1px}
+.delay button{border:1px solid var(--line);background:#FCFAF6;color:var(--ink3);border-radius:6px;
+  padding:3px 8px;font-size:11px;font-family:inherit;cursor:pointer;line-height:1.5}
+.delay button:active{background:#F2EDE4}
+.delay button.clr{color:var(--amber);border-color:#EADCC0}
 .navbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
   background:var(--red);color:#fff;border:1px solid var(--red);border-radius:7px;
   padding:5px 12px;font-size:12px;line-height:1.4;font-weight:500}
@@ -175,6 +182,7 @@ select option{color:#1F1D1A;background:#fff}
 .summary{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.85}
 .summary b{color:var(--ink)}
 .summary .dim{color:var(--ink3);font-size:12px}
+.reset.share{border-color:#C8D3C9;color:var(--green);background:#FBFDFB;margin-bottom:8px}
 .reset{border:1px solid var(--line);background:#fff;color:var(--ink3);border-radius:8px;
   padding:8px 14px;font-size:12.5px;font-family:inherit;width:100%;margin-top:16px;cursor:pointer}
 footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padding:0 20px;line-height:1.8}
@@ -222,6 +230,7 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
   <div class="sec-t">今天还剩多少</div>
   <div class="summary" id="summary"></div>
 
+  <button class="reset share" id="share">把当前进度发给另一个人</button>
   <button class="reset" id="reset">重置今天的操作</button>
   <footer>推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵。<br>
   点顶部大时间可以切到「某一刻」演练，提前看那个点该去哪。点「到了」记为已完成，点「跳过」移除，后面的时间和推荐立刻重算。<br>
@@ -341,7 +350,7 @@ const DAYS = {
     {id:'d2h',t:'21:30',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
   ]},
   D3:{ date:'11.21 周六', start:9*60, end:23*60, sunset:17*60+35, items:[
-    {id:'d3a',t:'09:00',name:'湖南省博物馆',zone:'kaifu',dur:180,type:'逛',win:[540,960]},
+    {id:'d3a',t:'09:00',name:'湖南省博物馆',zone:'kaifu',dur:180,type:'逛',win:[540,960],book:1},
     {id:'d3b',t:'12:20',name:'回五一广场 · 午餐',zone:'wu',dur:60,type:'吃',win:null},
     {id:'d3c',t:'14:00',name:'谢子龙影像馆',zone:'yanghu',dur:90,type:'拍',win:[600,1080]},
     {id:'d3d',t:'15:40',name:'李自健美术馆',zone:'yanghu',dur:60,type:'逛',win:[570,1050]},
@@ -401,7 +410,9 @@ const POOL = [
 
 /* ---------- 状态 ---------- */
 const KEY = 'cs_trip_v2';
-let state = load() || {day:'D1', done:{}, skip:{}, loc:'wu', clock:null};
+let state = load() || {day:'D1', done:{}, skip:{}, loc:'wu', clock:null, pad:{}, book:{}};
+if(!state.pad) state.pad = {};       // 每项的额外等待/延时（分钟）
+if(!state.book) state.book = {};     // 需预约项的预约状态
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
@@ -490,6 +501,7 @@ function parseWttr(j){
         rain: +x.chanceofrain || 0,
         mm: parseFloat(x.precipMM) || 0,
         temp: +x.tempC,
+        feels: (+x.FeelsLikeC || +x.tempC),
         code: code,
         desc: wxCN(code, (x.weatherDesc && x.weatherDesc[0] && x.weatherDesc[0].value) || '')
       });
@@ -622,16 +634,16 @@ function replan(){
 
   for(const it of day.items){
     if(state.done[it.id]){
-      out.push(Object.assign({}, it, {stat:'done', showT:it.t}));
+      out.push(Object.assign({}, it, {stat:'done', showT:it.t, pad:state.pad[it.id] || 0}));
       prevZone = it.zone;
       continue;
     }
     if(state.skip[it.id]){
-      out.push(Object.assign({}, it, {stat:'skip', showT:it.t}));
+      out.push(Object.assign({}, it, {stat:'skip', showT:it.t, pad:state.pad[it.id] || 0}));
       continue; // 跳过 = 没去，位置不变
     }
     if(pastIds.has(it.id)){
-      out.push(Object.assign({}, it, {stat:'past', showT:it.t}));
+      out.push(Object.assign({}, it, {stat:'past', showT:it.t, pad:state.pad[it.id] || 0}));
       continue; // 已过点，不推进时间轴
     }
 
@@ -659,10 +671,14 @@ function replan(){
 
     out.push(Object.assign({}, it, {
       stat: blocked ? 'dead' : (late ? 'late' : 'ok'),
-      showT: fmt(cursor), start: cursor, move: move, blocked: blocked, late: late
+      showT: fmt(cursor), start: cursor, move: move, blocked: blocked, late: late,
+      pad: state.pad[it.id] || 0
     }));
     // 判死的项去不成，不占时间、也不改变你的位置
-    if(!blocked){ cursor += it.dur; prevZone = it.zone; }
+    if(!blocked){
+      cursor += it.dur + (state.pad[it.id] || 0);   // 等位/多待都算进去
+      prevZone = it.zone;
+    }
   }
 
   return {list:out, cursor:cursor, day:day, live:live, isToday:isSameDay(state.day),
@@ -834,9 +850,11 @@ function renderTabs(){
 }
 
 function renderLoc(){
-  if(!state.locName || state.locName === undefined){
-    state.locName = SPOTS[0][0];
-    state.loc = SPOTS[0][1];
+  if(!state.locName){
+    // 从分享链接导入时只有片区、没有具体地标，取该片区第一个点当默认
+    const first = SPOTS.find(function(sp){ return sp[1] === state.loc; }) || SPOTS[0];
+    state.locName = first[0];
+    state.loc = first[1];
   }
   const el = document.getElementById('loc');
   el.innerHTML = SPOTS.map(([n,z]) =>
@@ -866,7 +884,12 @@ function renderFeed(plan){
     if(x.stat==='late') tags.push('<span class="tag a">偏晚</span>');
     if(x.stat==='dead') tags.push('<span class="tag r">来不及</span>');
     if(x.stat==='past') tags.push('<span class="tag">已过点</span>');
-    if(x.win) tags.push('<span class="tag">需预约/有闭馆</span>');
+    if(x.book){
+      tags.push(x.stat==='done' || state.book[x.id]
+        ? '<span class="tag g" data-act="book" data-id="' + x.id + '">已约</span>'
+        : '<span class="tag r" data-act="book" data-id="' + x.id + '">需预约·未约</span>');
+    }
+    if(x.pad > 0) tags.push('<span class="tag a">+' + x.pad + ' 分等待</span>');
     const btns = x.stat==='done' || x.stat==='skip' ? '' :
       `<button class="ok" data-act="done" data-id="${x.id}">到了</button>
        <button class="no" data-act="skip" data-id="${x.id}">跳过</button>`;
@@ -887,20 +910,33 @@ function renderFeed(plan){
     const g = resolveGeo(x);
     const mode = (x.move && x.move > 0) ? 'bus' : 'walk';
     const modeCN = mode === 'bus' ? '公交' : '步行';
+    const movable = x.stat !== 'done' && x.stat !== 'skip' && x.stat !== 'past';
+    const delay = movable ? `<div class="delay">
+        <span>延后</span>
+        <button data-act="delay" data-id="${x.id}" data-min="15">+15</button>
+        <button data-act="delay" data-id="${x.id}" data-min="30">+30</button>
+        <button data-act="delay" data-id="${x.id}" data-min="60">+1h</button>
+        ${x.pad > 0 ? `<button data-act="delay" data-id="${x.id}" data-min="${-x.pad}" class="clr">清零</button>` : ''}
+      </div>` : '';
     const navBtns = `<div class="acts">
       <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
       ${wetBtn}
       ${btns}
-    </div>`;
+    </div>${delay}`;
     return `<div class="row ${cls}" data-id="${x.id}">
       <div class="t">${x.showT || x.t}</div>
       <div class="bod">
         <h4>${x.name}${tags.join('')}</h4>
-        <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur} 分</span>${move}</div>
+        <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur}${x.pad ? '+' + x.pad : ''} 分</span>${move}</div>
         ${warn}${navBtns}
       </div>
     </div>`;
   }).join('');
+
+  el.querySelectorAll('.tag[data-act="book"]').forEach(function(t){
+    t.style.cursor = 'pointer';
+    t.onclick = function(ev){ ev.stopPropagation(); toggleBook(t.dataset.id); };
+  });
 
   el.querySelectorAll('.row').forEach(function(r){
     r.onclick = function(ev){
@@ -913,6 +949,8 @@ function renderFeed(plan){
 
   el.querySelectorAll('button[data-act]').forEach(b => {
     b.onclick = () => {
+      if(b.dataset.act === 'delay'){ delayItem(b.dataset.id, +b.dataset.min); return; }
+      if(b.dataset.act === 'book'){ toggleBook(b.dataset.id); return; }
       if(b.dataset.act === 'swap'){ swapItem(b.dataset.id, b.dataset.alt); return; }
       if(b.dataset.act === 'revert'){ revertItem(b.dataset.id); return; }
       if(b.dataset.act === 'alldone'){
@@ -1022,6 +1060,17 @@ function swapItem(id, altName){
   save(); renderAll();
 }
 
+function delayItem(id, min){
+  const v = (state.pad[id] || 0) + min;
+  if(v <= 0) delete state.pad[id]; else state.pad[id] = v;
+  save(); renderAll();
+}
+
+function toggleBook(id){
+  state.book[id] = state.book[id] ? 0 : 1;
+  save(); renderAll();
+}
+
 function revertItem(id){
   const it = DAYS[state.day].items.find(function(x){ return x.id === id; });
   if(!it || !it.origName) return;
@@ -1052,7 +1101,25 @@ function renderSummary(plan){
   if(past.length) h += '<br><span style="color:#A9701B">有 ' + past.length + ' 项原定时间已经过去、又没打勾，暂时按「没去」处理。如果其实去了，点一下那行的「到了」。</span>';
   if(dead.length) h += '<br><span style="color:#B33A2B">有 ' + dead.length + ' 项来不及，已在列表标出，可点「跳过」清掉。</span>';
   if(!live) h += '<br><span class="dim">现在是按原计划顺序预演；点顶部时间可以切到「按某一刻走」，结果会跟真实时间走。</span>';
+  const home = returnTip(plan);
+  if(home) h += '<br>' + home;
   document.getElementById('summary').innerHTML = h;
+}
+
+// 收工回程：长沙地铁 23:00 前后末班，过了点只能打车
+function returnTip(plan){
+  const {list, cursor, day} = plan;
+  const alive = list.filter(function(x){ return x.stat !== 'skip'; });
+  const last = alive[alive.length - 1];
+  if(!last || cursor < 22*60) return '';
+  const back = (TRAVEL[last.zone] && TRAVEL[last.zone].wu) || 20;
+  const leave = cursor + (last.move || 0) + back;
+  if(leave > 22*60+45){
+    return '<span style="color:#B33A2B">收工 ' + fmt(cursor) + ' 在' + ZONE_CN[last.zone]
+      + '，回到五一商圈约 ' + leave + ' ——' + fmt(leave) + ' 这个点地铁基本没了，打车要等 20 分钟以上。</span>';
+  }
+  return '<span style="color:#A9701B">收工 ' + fmt(cursor) + '，回五一商圈约 ' + fmt(leave)
+    + '。地铁 23:00 末班，留 15 分钟进站，最晚 ' + fmt(leave + 15) + ' 得走。</span>';
 }
 
 function renderStat(plan){
@@ -1068,6 +1135,78 @@ function renderClock(){
   el.classList.toggle('sim', state.clock != null);
   const bar = document.getElementById('clockbar');
   bar.classList.toggle('on', state.clock !== null || bar.dataset.open === '1');
+}
+
+
+/* ---------- 进度短码：把状态压成一条能发微信的链接 ---------- */
+const ALL_ITEMS = [];
+Object.keys(DAYS).forEach(function(dk){
+  DAYS[dk].items.forEach(function(it){ ALL_ITEMS.push({day:dk, id:it.id}); });
+});
+
+// 只有这几项需要预约，单独编码，别为 26 项各占一个字符
+const BOOK_IDS = ['d3a'];
+
+function encodeState(){
+  let st = '', pd = '', bk = '';
+  ALL_ITEMS.forEach(function(o){
+    st += state.done[o.id] ? '1' : (state.skip[o.id] ? '2' : '0');
+    pd += (state.pad[o.id] ? Math.min(35, Math.round(state.pad[o.id]/15)) : 0).toString(36);
+  });
+  BOOK_IDS.forEach(function(id){ bk += state.book[id] ? '1' : '0'; });
+  return 'v1.' + state.day + '.' + state.loc + '.' + st + '.' + pd + '.' + bk;
+}
+
+function decodeState(str){
+  const p = String(str || '').split('.');
+  if(p[0] !== 'v1' || p.length < 6) return null;
+  const day = DAYS[p[1]] ? p[1] : 'D1';
+  const loc = ZONE_CN[p[2]] ? p[2] : 'wu';
+  const st = p[3] || '', pd = p[4] || '', bk = p[5] || '';
+  const done = {}, skip = {}, pad = {}, book = {};
+  ALL_ITEMS.forEach(function(o, i){
+    if(st[i] === '1') done[o.id] = 1;
+    else if(st[i] === '2') skip[o.id] = 1;
+    const v = parseInt(pd[i] || '0', 36) || 0;
+    if(v) pad[o.id] = v * 15;
+  });
+  BOOK_IDS.forEach(function(id, i){ if(bk[i] === '1') book[id] = 1; });
+  return {day:day, loc:loc, done:done, skip:skip, pad:pad, book:book};
+}
+
+function shareLink(){
+  return location.origin + location.pathname + '#s=' + encodeState();
+}
+
+function doShare(){
+  const url = shareLink();
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(url).then(function(){
+      toast('链接已复制，发给她打开就是你现在的进度');
+    }).catch(function(){ prompt('复制这个链接发给她', url); });
+  } else {
+    prompt('复制这个链接发给她', url);
+  }
+}
+
+// 打开带 #s= 的链接时自动导入
+function importFromHash(){
+  if(typeof location === 'undefined' || !location.hash) return false;
+  const m = location.hash.match(/#s=([^&]+)/);
+  if(!m) return false;
+  const code = decodeURIComponent(m[1]);
+  let last = null;
+  try{ last = sessionStorage.getItem('cs_imported'); }catch(e){}
+  if(last === code) return false;
+  const d = decodeState(code);
+  if(!d) return false;
+  Object.assign(state, d);
+  state.clock = null;
+  save();
+  try{ sessionStorage.setItem('cs_imported', code); }catch(e){}
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  setTimeout(function(){ toast('已导入分享的进度，可以直接用'); }, 700);
+  return true;
 }
 
 /* ---------- 定位：WGS84 → GCJ-02（高德坐标） ---------- */
@@ -1166,7 +1305,19 @@ function autoLocate(){
     if(hit.d <= 120)      msg = '你在「' + hit.spot[0] + '」';
     else if(hit.d <= 600) msg = '你在' + zoneCN + '，「' + hit.spot[0] + '」就在 ' + distText(hit.d) + ' 外';
     else                  msg = '你在' + zoneCN + '一带，最近的是「' + hit.spot[0] + '」' + distText(hit.d);
-    toast(msg + '　GPS 精度 ±' + Math.round(acc) + ' 米');
+    msg += '　GPS 精度 ±' + Math.round(acc) + ' 米';
+    // 如果正好站在今天的某个待办项上，提醒一下别忘打勾
+    if(lastPlan){
+      const pend = lastPlan.list.filter(function(x){ return x.stat === 'ok' || x.stat === 'late'; });
+      for(let i = 0; i < pend.length; i++){
+        const g2 = resolveGeo(pend[i]);
+        if(g2 && distM(g[0], g[1], g2.lng, g2.lat) < 150){
+          msg += '\n这里就是今天的「' + pend[i].name + '」，走的时候记得点「到了」';
+          break;
+        }
+      }
+    }
+    toast(msg);
   }, function(err){
     btn.disabled = false; btn.textContent = '定位';
     const msg = {1:'你拒绝了位置权限，去浏览器设置里重新打开',
@@ -1378,6 +1529,14 @@ function bindMapBar(){
   };
 }
 
+function wearTip(feel){
+  if(feel == null) return '';
+  if(feel <= 4)  return '穿厚外套，江边风大';
+  if(feel <= 9)  return '带件外套，晚上江边冷';
+  if(feel <= 14) return '薄外套或针织就够';
+  return '';
+}
+
 function renderWx(){
   const el = document.getElementById('wx');
   if(!el) return;
@@ -1396,10 +1555,16 @@ function renderWx(){
   // 用当天降水概率最高的那格来代表这天的天气，比用 0 点那格准
   const worst = w.hours.slice().sort(function(a,b){ return b.rain - a.rain; })[0] || {};
   const desc = worst.desc || '';
+  // 用当天最冷那格算体感，晚上要穿什么靠它
+  const coldest = w.hours.slice().sort(function(a,b){ return (a.feels||a.temp) - (b.feels||b.temp); })[0] || {};
+  const feel = Math.round(coldest.feels || coldest.temp || w.tmin);
   let h = '<b>' + DAYS[dk].date + '</b>' + (desc ? ' · ' + desc : '')
         + ' · ' + w.tmin + '~' + w.tmax + '℃';
+  if(Math.abs(feel - w.tmin) >= 2) h += '（最低体感 ' + feel + '℃）';
   if(sp) h += '<span class="wet">' + fmt(sp.from) + '–' + fmt(sp.to) + ' 有雨，最高 ' + sp.peak + '%</span>';
   else h += '<span class="dry">全天基本无雨</span>';
+  const wear = wearTip(feel);
+  if(wear) h += '<span class="wear">' + wear + '</span>';
 
   el.innerHTML = h;
   el.className = 'wx' + (sp ? ' raining' : '');
@@ -1451,13 +1616,31 @@ bindMapBar();
 initMap();  // 有 Key 才会真加载，没有就显示填写入口
 loadWX();   // 异步取天气，回来自己会重渲染
 
+document.getElementById('share').onclick = doShare;
+
 document.getElementById('reset').onclick = () => {
-  state.done = {}; state.skip = {}; save(); renderAll();
+  state.done = {}; state.skip = {}; state.pad = {}; state.book = {};
+  save(); renderAll();
 };
 
+// 带 #s= 打开 → 先导入再渲染
+importFromHash();
+
+// 离线缓存：https 下注册，断网也能打开
+if('serviceWorker' in navigator && window.isSecureContext){
+  navigator.serviceWorker.register('./sw.js').catch(function(){});
+}
+
 renderAll();
-setInterval(() => {
-  document.getElementById('clock').innerHTML = fmt(nowMin()) + '<small>现在</small>';
+
+let lastTick = -1;
+setInterval(function(){
+  if(state.clock != null) return;      // 演练模式不跟真实时间
+  const m = nowMin();
+  if(m === lastTick) return;
+  lastTick = m;
+  renderClock();
+  if(m % 5 === 0) renderAll();         // 每 5 分钟让推荐跟着时间走
 }, 20000);
 </script>
 </body>
