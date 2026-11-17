@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#B33A2B">
+<title>长沙行程 · 实时调整</title>
+<style>
+:root{
+  --bg:#F7F4EE; --card:#fff; --ink:#1F1D1A; --ink2:#57524C; --ink3:#928B82;
+  --line:#E4DED3; --red:#B33A2B; --red2:#FBEFEC; --amber:#A9701B; --amber2:#FBF3E3;
+  --green:#3F6B4A; --green2:#EDF3EE; --blue:#2F5C8A; --blue2:#EBF1F7;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  padding-bottom:40px}
+
+.bar{position:sticky;top:0;z-index:20;background:var(--red);color:#fff;padding:12px 16px 13px;
+  box-shadow:0 2px 12px rgba(120,40,30,.18)}
+.bar-row{display:flex;align-items:baseline;gap:12px}
+.clock{font-size:27px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.clock small{font-size:12px;font-weight:400;opacity:.7;margin-left:4px}
+.clock{cursor:pointer;user-select:none}
+.clock.sim{color:#FFE9B8}
+.clockbar{display:none;gap:6px;margin-top:8px;flex-wrap:wrap}
+.clockbar.on{display:flex}
+.clockbar button{flex:0 0 auto;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.24);
+  border-radius:7px;padding:4px 9px;font-size:12px;font-family:inherit;cursor:pointer}
+.clockbar button.k{background:rgba(255,255,255,.9);color:var(--red);font-weight:600;border-color:#fff}
+.bar-stat{font-size:12.5px;opacity:.9;margin-left:auto;text-align:right;line-height:1.5}
+.bar-stat b{font-weight:600}
+.loc-row{display:flex;gap:8px;margin-top:9px;align-items:center}
+.loc-row label{font-size:12px;opacity:.8;white-space:nowrap}
+select{flex:1;min-width:0;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.28);
+  border-radius:8px;padding:7px 9px;font-size:13px;font-family:inherit;appearance:none}
+select option{color:#1F1D1A;background:#fff}
+#geobtn{flex:0 0 auto;background:rgba(255,255,255,.9);color:var(--red);border:1px solid #fff;
+  border-radius:8px;padding:7px 12px;font-size:12.5px;font-family:inherit;font-weight:600;
+  cursor:pointer;white-space:nowrap}
+#geobtn:disabled{opacity:.65}
+#geobtn.warn{background:rgba(255,255,255,.22);color:#fff;border-color:rgba(255,255,255,.4);font-weight:400}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);
+  background:rgba(31,29,26,.92);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;
+  max-width:86vw;line-height:1.6;opacity:0;pointer-events:none;transition:.22s;z-index:99;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.day-tabs{display:flex;gap:6px;margin-top:10px}
+.day-tabs button{flex:1;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.22);
+  border-radius:8px;padding:6px 4px;font-size:12px;font-family:inherit;cursor:pointer;transition:.15s}
+.day-tabs button.on{background:#fff;color:var(--red);border-color:#fff;font-weight:600}
+
+.wrap{padding:14px 14px 0;max-width:720px;margin:0 auto}
+.sec-t{font-size:12.5px;color:var(--ink3);letter-spacing:.08em;margin:16px 2px 8px;font-weight:600}
+.wx{padding:9px 12px;border:1px solid var(--line);background:#fff;border-radius:10px;margin-bottom:10px;
+  font-size:12.5px;color:var(--ink2);line-height:1.65;transition:.2s}
+.wx b{color:var(--ink);font-weight:600}
+.wx .dim,.wx .dry{color:var(--ink3)}
+.wx .wet{display:inline-block;margin-left:6px;color:var(--blue);font-weight:500}
+.wx.raining{background:var(--blue2);border-color:#D6E2EF}
+
+.feed{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.row{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid #F1ECE3;position:relative}
+.row::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent}
+.row.st-ok::before{background:#C0574A}
+.row.st-done::before{background:#7FA98A}
+.row.st-late::before{background:#D8A24A}
+.row.st-dead::before{background:#C9812F}
+.row.st-past::before{background:#D9D3C9}
+.row.st-skip::before{background:#D9D3C9}
+.row:last-child{border-bottom:none}
+.row .t{flex:0 0 46px;font-size:13px;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums;padding-top:2px}
+.row .bod{flex:1;min-width:0}
+.row h4{font-size:14.5px;font-weight:600;line-height:1.4}
+.row .meta{font-size:11.5px;color:var(--ink3);margin-top:3px}
+.row .meta span{margin-right:8px}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:20px;margin-left:5px;
+  background:var(--blue2);color:var(--blue);vertical-align:1.5px;font-weight:400}
+.tag.g{background:var(--green2);color:var(--green)}
+.tag.a{background:var(--amber2);color:var(--amber)}
+.tag.r{background:var(--red2);color:var(--red)}
+.acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center}
+.acts button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:7px;
+  padding:5px 11px;font-size:12px;font-family:inherit;cursor:pointer;transition:.15s}
+.acts button:active{transform:scale(.97)}
+.acts button.ok{border-color:#BFD3C4;color:var(--green)}
+.acts button.ok.on{background:var(--green);color:#fff;border-color:var(--green)}
+.acts button.no{border-color:#EFD3CE;color:var(--red)}
+.acts button.no.on{background:var(--red);color:#fff;border-color:var(--red)}
+.navbtn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;
+  background:var(--red);color:#fff;border:1px solid var(--red);border-radius:7px;
+  padding:5px 12px;font-size:12px;line-height:1.4;font-weight:500}
+.navbtn.g{background:#fff;color:var(--ink2);border-color:var(--line);font-weight:400}
+.geo{background:var(--green2)!important;color:var(--green)!important;margin-right:0!important;
+  padding:1px 6px;border-radius:20px;font-size:10.5px}
+.geo.ap{background:var(--amber2)!important;color:var(--amber)!important}
+
+.mapcard{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff;margin-bottom:2px}
+#map{height:290px;width:100%;position:relative;background:#EFEAE1}
+.mapnoset{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;text-align:center;padding:22px;gap:6px;background:#FCFAF6}
+.mapnoset b{font-size:13.5px}
+.mapnoset span{font-size:11.5px;color:var(--ink3);line-height:1.7}
+.mapnoset input{width:88%;max-width:320px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;
+  font-size:12.5px;font-family:inherit;background:#fff}
+.mapnoset button{margin-top:4px;border:1px solid var(--red);background:var(--red);color:#fff;
+  border-radius:8px;padding:7px 16px;font-size:13px;font-family:inherit;cursor:pointer}
+.mapbar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-top:1px solid var(--line);background:#FAF7F1}
+.mapbar span{font-size:11.5px;color:var(--ink3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapbar button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:6px;
+  padding:3px 9px;font-size:11.5px;font-family:inherit;cursor:pointer;white-space:nowrap}
+
+/* 地图气泡里的序号标记 */
+.mk{width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;border:2px solid #fff;
+  box-shadow:0 1px 5px rgba(0,0,0,.28);font-variant-numeric:tabular-nums}
+.mk.done{background:var(--green)}
+.mk.skip{background:#B9B2A7}
+.mk.dead{background:var(--amber)}
+.mk.me{background:#1F4E79;font-size:11px;box-shadow:0 0 0 4px rgba(31,78,121,.2),0 1px 5px rgba(0,0,0,.3)}
+.mk.here{background:#1F4E79;box-shadow:0 0 0 4px rgba(31,78,121,.22),0 1px 5px rgba(0,0,0,.3)}
+
+/* 高德信息窗体 */
+.iw{padding:2px 2px 0;font-size:12.5px;line-height:1.6;min-width:130px}
+.iw b{font-size:13.5px;display:block;margin-bottom:2px}
+.iw .d{color:#857E74;font-size:11.5px}
+.iw a{display:inline-block;margin-top:7px;background:#B33A2B;color:#fff;text-decoration:none;
+  border-radius:6px;padding:4px 11px;font-size:12px}
+.amap-info-content{padding:10px 12px !important;border-radius:10px !important}
+
+.row.done{background:#FAFCF9}
+.row.done h4{color:var(--ink3);text-decoration:line-through}
+.row.done .t{color:var(--green)}
+.row.skip{opacity:.5}
+.notice{padding:10px 14px;background:var(--amber2);color:var(--amber);font-size:12px;line-height:1.7;
+  border-bottom:1px solid #F0E4CB}
+.notice button{margin-left:6px;border:1px solid #E4D3B4;background:#fff;color:var(--amber);
+  border-radius:6px;padding:3px 8px;font-size:11.5px;font-family:inherit;cursor:pointer}
+.row.past{opacity:.55;background:#FBF9F5}
+.row.past h4{color:var(--ink3)}
+.row.past .t{color:var(--ink3)}
+.row.skip h4{text-decoration:line-through}
+.row.late{background:#FEFAF7}
+.row.late .t{color:var(--amber)}
+.row .warn{font-size:11.5px;color:var(--red);margin-top:5px}
+
+.reco{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+.reco .head{padding:12px 14px;background:#FAF7F1;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink2)}
+.reco .head b{color:var(--red);font-variant-numeric:tabular-nums}
+.reco .head .dim{font-size:11.5px;color:var(--ink3)}
+.hero{padding:14px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#FFFBF6,#fff)}
+.hero .hk{font-size:11.5px;color:var(--red);font-weight:600;letter-spacing:.04em;margin-bottom:5px}
+.hero h4{font-size:17px;font-weight:600;line-height:1.35}
+.hero p{font-size:12.5px;color:var(--ink2);margin-top:4px;line-height:1.65}
+.hero p.dim{color:var(--ink3);font-size:11.5px}
+.hero .acts{margin-top:10px}
+.sub{padding:9px 14px 3px;font-size:11.5px;color:var(--ink3);letter-spacing:.05em;background:#FCFAF6;
+  border-bottom:1px solid #F1ECE3}
+.rc{display:flex;gap:11px;padding:12px 14px;border-bottom:1px solid #F1ECE3;align-items:flex-start}
+.rc:last-child{border-bottom:none}
+.rc .n{flex:0 0 20px;height:20px;border-radius:50%;background:var(--red2);color:var(--red);
+  font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.rc .bod{flex:1;min-width:0}
+.rc h4{font-size:14px;font-weight:600}
+.rc p{font-size:11.5px;color:var(--ink3);margin-top:2px;line-height:1.6}
+.rc p.dim{color:#A9A29A}
+.rc.dim{opacity:.62}
+.rc.dim .n{background:#F0EDE7;color:var(--ink3)}
+.rc button{border:1px solid var(--line);background:#fff;color:var(--ink2);border-radius:7px;
+  padding:5px 10px;font-size:12px;font-family:inherit;cursor:pointer;white-space:nowrap;margin-left:8px}
+
+.empty{padding:26px 14px;text-align:center;color:var(--ink3);font-size:13px}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;font-size:13px;color:var(--ink2);line-height:1.85}
+.summary b{color:var(--ink)}
+.summary .dim{color:var(--ink3);font-size:12px}
+.reset{border:1px solid var(--line);background:#fff;color:var(--ink3);border-radius:8px;
+  padding:8px 14px;font-size:12.5px;font-family:inherit;width:100%;margin-top:16px;cursor:pointer}
+footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padding:0 20px;line-height:1.8}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-row">
+    <div class="clock" id="clock">--:--</div>
+    <div class="bar-stat" id="stat"></div>
+  </div>
+  <div class="clockbar" id="clockbar">
+    <button data-s="-60">−1h</button><button data-s="-15">−15m</button>
+    <button data-s="now" class="k">现在</button>
+    <button data-s="15">+15m</button><button data-s="60">+1h</button>
+    <button data-s="set">设时刻</button>
+  </div>
+  <div class="loc-row">
+    <label>我在</label>
+    <select id="loc"></select>
+    <button id="geobtn" type="button">定位</button>
+  </div>
+  <div class="day-tabs" id="tabs"></div>
+</div>
+
+<div class="wrap">
+  <div class="wx" id="wx">正在取天气…</div>
+
+  <div class="mapcard">
+    <div id="map"><div class="mapnoset" id="mapnoset"></div></div>
+    <div class="mapbar">
+      <span id="mapinfo">地图</span>
+      <button id="mapfit">看全程</button>
+      <button id="mapset">设置 Key</button>
+    </div>
+  </div>
+
+  <div class="sec-t" id="feedTitle">今日行程</div>
+  <div class="feed" id="feed"></div>
+
+  <div class="sec-t">现在这一刻</div>
+  <div class="reco" id="reco"></div>
+
+  <div class="sec-t">今天还剩多少</div>
+  <div class="summary" id="summary"></div>
+
+  <button class="reset" id="reset">重置今天的操作</button>
+  <footer>推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵。<br>
+  点顶部大时间可以切到「某一刻」演练，提前看那个点该去哪。点「到了」记为已完成，点「跳过」移除，后面的时间和推荐立刻重算。<br>
+  雨天会自动把户外项标出来，并给一个就近的室内替代（可还原）。<br>
+  天气来自 wttr.in，免费只给 3 天，出发后每天打开就能看到当天。<br>
+  地图的高德 Key 只存在这台手机的浏览器里，页面源码中没有；点行程行可以让地图定位到那个点。数据只存在本机。</footer>
+</div>
+
+<script>
+/* ---------- 数据 ---------- */
+const ZONE_CN = {wu:'五一商圈',hexi:'河西岳麓',yanghu:'洋湖',kaifu:'开福',tianxin:'天心',meixi:'梅溪湖'};
+
+// 片区之间通行分钟数
+const TRAVEL = {
+  wu:{wu:8,hexi:25,yanghu:35,kaifu:20,tianxin:10,meixi:30},
+  hexi:{wu:25,hexi:8,yanghu:25,kaifu:40,tianxin:30,meixi:20},
+  yanghu:{wu:35,hexi:25,yanghu:8,kaifu:45,tianxin:25,meixi:25},
+  kaifu:{wu:20,hexi:40,yanghu:45,kaifu:8,tianxin:25,meixi:40},
+  tianxin:{wu:10,hexi:30,yanghu:25,kaifu:25,tianxin:8,meixi:35},
+  meixi:{wu:30,hexi:20,yanghu:25,kaifu:40,tianxin:35,meixi:8}
+};
+
+// 所有地点：名称, 片区, 经度, 纬度（GCJ-02 高德坐标系）
+const SPOTS = [
+  ['五一广场','wu',112.9775,28.1957],
+  ['太平街','wu',112.9700,28.1943],
+  ['坡子街','wu',112.9745,28.1925],
+  ['潮宗街','wu',112.9680,28.2020],
+  ['IFS 国金中心','wu',112.9795,28.1965],
+  ['黄兴路步行街','wu',112.9775,28.1935],
+  ['恋爱天台','wu',112.9780,28.1935],
+  ['超级文和友','wu',112.9720,28.1930],
+  ['杜甫江阁','wu',112.9670,28.1900],
+  ['贾谊故居','wu',112.9705,28.1945],
+  ['橘子洲','hexi',112.9610,28.1780],
+  ['岳麓山东门','hexi',112.9380,28.1870],
+  ['岳麓山山顶','hexi',112.9330,28.1830],
+  ['爱晚亭','hexi',112.9350,28.1845],
+  ['岳麓书院','hexi',112.9370,28.1850],
+  ['麓山南路','hexi',112.9420,28.1830],
+  ['湖南大学','hexi',112.9420,28.1835],
+  ['谢子龙影像馆','yanghu',112.9280,28.1330],
+  ['李自健美术馆','yanghu',112.9270,28.1310],
+  ['洋湖湿地','yanghu',112.9250,28.1290],
+  ['后湖艺术区','yanghu',112.9320,28.1720],
+  ['湖南省博物馆','kaifu',112.9940,28.2130],
+  ['红星相声社','kaifu',112.9820,28.2080],
+  ['冬瓜山','tianxin',112.9790,28.1760],
+  ['天心阁','tianxin',112.9800,28.1885],
+  ['白沙井','tianxin',112.9830,28.1860],
+  ['简牍博物馆','tianxin',112.9830,28.1910],
+  ['湖南第一师范','tianxin',112.9740,28.1830],
+  ['梅溪湖艺术中心','meixi',112.8970,28.1900],
+  ['长沙南站','wu',113.0650,28.1500]
+];
+
+// 片区中心，用于没匹配到具体地点时兜底
+const ZONE_CENTER = {
+  wu:[112.9775,28.1957], hexi:[112.9380,28.1870], yanghu:[112.9250,28.1290],
+  kaifu:[112.9940,28.2130], tianxin:[112.9800,28.1885], meixi:[112.8970,28.1900]
+};
+
+const GEO = {};
+SPOTS.forEach(([n,z,lng,lat]) => { GEO[n] = [lng,lat]; });
+// 常用别名，让行程里的口语名称也能定位
+Object.assign(GEO, {
+  '费大厨':[112.9780,28.1950], '炊烟':[112.9770,28.1945],
+  '肆姐面粉馆':[112.9760,28.1940], '坛宗':[112.9775,28.1950],
+  '杨裕兴':[112.9760,28.1950], '坡子街火宫殿':[112.9740,28.1920],
+  // 下面这些是行程里的描述性写法，落到具体门口而不是片区中心
+  'IFS':[112.9795,28.1965], 'KAWS':[112.9795,28.1965],
+  '岳麓山索道':[112.9380,28.1870], '山顶':[112.9330,28.1830],
+  '回五一广场':[112.9775,28.1957], '回市区':[112.9775,28.1957],
+  '买伴手礼':[112.9775,28.1935], '步行街':[112.9775,28.1935],
+  '长沙南':[113.0650,28.1500], '酒店':[112.9775,28.1957],
+  '长沙之眼':[112.9330,28.1830], '游轮':[112.9670,28.1900],
+  '湘江游':[112.9670,28.1900]
+});
+
+// 按名称里出现的最长地名词匹配，避免「广场」这类短词误命中
+const GEO_KEYS = Object.keys(GEO).sort((a,b) => b.length - a.length);
+
+function findGeo(name){
+  for(const k of GEO_KEYS){
+    if(name.indexOf(k) >= 0) return { key:k, lng:GEO[k][0], lat:GEO[k][1] };
+  }
+  return null;
+}
+
+// 去掉「· 午餐」「→ 坡子街」这类后缀，得到干净的关键词
+function cleanName(name){
+  let s = String(name).split('·')[0].split('→')[0].trim();
+  return s || String(name);
+}
+
+
+/* 每日行程：id, 时间, 名称, 片区, 时长(分), 类型, 开放窗[起,止] 或 null, 户外 */
+const DAYS = {
+  D1:{ date:'11.19 周四', start:12*60, end:23*60, sunset:17*60+36, items:[
+    {id:'d1a',t:'12:35',name:'酒店放行李',zone:'wu',dur:30,type:'杂',win:null},
+    {id:'d1b',t:'13:00',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:40,type:'吃',win:null},
+    {id:'d1c',t:'14:00',name:'太平街 → 坡子街',zone:'wu',dur:90,type:'逛',win:null},
+    {id:'d1d',t:'15:40',name:'潮宗街',zone:'wu',dur:60,type:'逛',win:null,outdoor:1},
+    {id:'d1e',t:'17:00',name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',win:null},
+    {id:'d1f',t:'18:15',name:'费大厨 / 炊烟 · 晚餐',zone:'wu',dur:90,type:'吃',win:null,notBefore:1050},
+    {id:'d1g',t:'19:50',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null},
+    {id:'d1h',t:'20:50',name:'恋爱天台',zone:'wu',dur:40,type:'拍',win:[600,1320],outdoor:1,nightOk:1}
+  ]},
+  D2:{ date:'11.20 周五', start:9*60, end:23*60, sunset:17*60+35, items:[
+    {id:'d2a',t:'09:00',name:'橘子洲',zone:'hexi',dur:150,type:'逛',win:null,outdoor:1},
+    {id:'d2b',t:'11:50',name:'回市区午餐',zone:'wu',dur:60,type:'吃',win:null},
+    {id:'d2c',t:'14:00',name:'岳麓山索道上山',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
+    {id:'d2d',t:'15:20',name:'山顶 → 爱晚亭',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
+    {id:'d2e',t:'16:40',name:'岳麓书院',zone:'hexi',dur:60,type:'逛',win:[480,1020]},
+    {id:'d2f',t:'18:00',name:'麓山南路 · 晚餐',zone:'hexi',dur:60,type:'吃',win:null,notBefore:1050},
+    {id:'d2g',t:'19:40',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140},
+    {id:'d2h',t:'21:30',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
+  ]},
+  D3:{ date:'11.21 周六', start:9*60, end:23*60, sunset:17*60+35, items:[
+    {id:'d3a',t:'09:00',name:'湖南省博物馆',zone:'kaifu',dur:180,type:'逛',win:[540,960]},
+    {id:'d3b',t:'12:20',name:'回五一广场 · 午餐',zone:'wu',dur:60,type:'吃',win:null},
+    {id:'d3c',t:'14:00',name:'谢子龙影像馆',zone:'yanghu',dur:90,type:'拍',win:[600,1080]},
+    {id:'d3d',t:'15:40',name:'李自健美术馆',zone:'yanghu',dur:60,type:'逛',win:[570,1050]},
+    {id:'d3e',t:'17:00',name:'洋湖湿地看日落',zone:'yanghu',dur:50,type:'拍',win:null,outdoor:1,duskOk:1},
+    {id:'d3f',t:'19:30',name:'冬瓜山夜宵',zone:'tianxin',dur:90,type:'吃',win:null,notBefore:1110}
+  ]},
+  D4:{ date:'11.22 周日', start:9*60, end:13*60+30, sunset:17*60+33, items:[
+    {id:'d4a',t:'09:00',name:'白沙井 或 天心阁',zone:'tianxin',dur:60,type:'逛',win:null},
+    {id:'d4b',t:'10:20',name:'买伴手礼',zone:'wu',dur:60,type:'买',win:null},
+    {id:'d4c',t:'11:30',name:'坛宗剁椒鱼头 · 午餐',zone:'wu',dur:80,type:'吃',win:null,notBefore:660},
+    {id:'d4d',t:'13:00',name:'地铁去长沙南',zone:'wu',dur:30,type:'行',win:null}
+  ]}
+};
+
+/* 可选池
+   slots：最合适的时段（dawn/morning/noon/afternoon/dusk/night/latenight）
+   open ：[开门, 停止进入]，硬约束，只写有明确闭馆时间的
+   why  ：一句话说清「为什么是这个时间点去」 */
+const POOL = [
+  {name:'后湖艺术区',zone:'yanghu',dur:90,type:'逛',open:[540,1290],slots:['afternoon','dusk'],outdoor:1,
+   why:'湖边咖啡馆扎堆，下午光线最软'},
+  {name:'长沙之眼观景台',zone:'hexi',dur:40,type:'拍',open:[600,1080],slots:['dusk'],outdoor:1,duskOk:1,
+   why:'山顶视野，日落那半小时最值，¥29.9'},
+  {name:'天心阁',zone:'tianxin',dur:60,type:'逛',open:[480,1050],slots:['morning','afternoon'],outdoor:1,
+   why:'古城墙，白天看砖、傍晚看灯，17:30 停止登阁'},
+  {name:'白沙井',zone:'tianxin',dur:30,type:'逛',open:[420,1200],slots:['morning'],outdoor:1,
+   why:'本地人清早排队打水，最有生活气的时候'},
+  {name:'简牍博物馆',zone:'tianxin',dur:60,type:'逛',open:[540,990],slots:['morning','afternoon'],
+   why:'走马楼吴简，室内不晒，免费'},
+  {name:'湖南第一师范',zone:'tianxin',dur:60,type:'逛',open:[540,990],slots:['morning','afternoon'],outdoor:1,
+   why:'民国建筑，游客少，安静逛'},
+  {name:'贾谊故居',zone:'wu',dur:40,type:'逛',open:[540,1020],slots:['morning','afternoon'],
+   why:'太平街里，免费，半小时能看完'},
+  {name:'潮宗街',zone:'wu',dur:60,type:'逛',open:[0,1440],slots:['afternoon','dusk'],outdoor:1,
+   why:'老街加咖啡馆，下午到傍晚最好拍'},
+  {name:'湘江游轮夜游',zone:'wu',dur:90,type:'玩',open:[1140,1290],slots:['night'],outdoor:1,
+   why:'19:00 / 20:00 两班，灯带全靠晚上，¥180'},
+  {name:'红星相声社',zone:'kaifu',dur:120,type:'玩',open:[1170,1290],slots:['night'],
+   why:'19:30 开演，要提前 3 天约'},
+  {name:'梅溪湖艺术中心',zone:'meixi',dur:60,type:'拍',open:[0,1440],slots:['afternoon','dusk'],outdoor:1,
+   why:'扎哈的曲线，蓝调时刻最出片'},
+  {name:'杜甫江阁',zone:'wu',dur:40,type:'拍',open:[540,1320],slots:['dusk','night'],outdoor:1,nightOk:1,
+   why:'日落后亮灯，对岸就是橘子洲，¥18'},
+  {name:'恋爱天台',zone:'wu',dur:40,type:'拍',open:[600,1320],slots:['night'],outdoor:1,nightOk:1,
+   why:'霓虹灯牌，天黑了才出效果，免费'},
+  {name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',open:[600,1320],slots:['afternoon','dusk','night'],
+   why:'地标合照，免费，晚上灯牌更好看'},
+  {name:'杨裕兴 · 嗦粉',zone:'wu',dur:40,type:'吃',open:[420,1260],slots:['morning','noon'],
+   why:'一碗肉丝粉，早上或中午最合适'},
+  {name:'火宫殿 · 小吃',zone:'wu',dur:60,type:'吃',open:[600,1260],slots:['noon','night'],
+   why:'坡子街一次吃全，等位看运气'},
+  {name:'南门口小吃街',zone:'tianxin',dur:60,type:'吃',open:[600,1380],slots:['night','latenight'],outdoor:1,
+   why:'本地宵夜场，越晚越热闹'},
+  {name:'冬瓜山 · 口味虾',zone:'tianxin',dur:90,type:'吃',open:[1080,1440],slots:['latenight'],
+   why:'21 点后才上人的夜宵一条街'}
+];
+
+/* ---------- 状态 ---------- */
+const KEY = 'cs_trip_v2';
+let state = load() || {day:'D1', done:{}, skip:{}, loc:'wu', clock:null};
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)); }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+function realNow(){
+  const d = new Date();
+  return d.getHours()*60 + d.getMinutes();
+}
+function nowMin(){ return state.clock == null ? realNow() : state.clock; }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmt(m){ m=Math.round(m); return pad(Math.floor(m/60)%24)+':'+pad(m%60); }
+function fmtDur(m){
+  m = Math.round(m);
+  if(m <= 0) return '0 分';
+  const h = Math.floor(m/60), mm = m%60;
+  return h ? (mm ? h+'h'+mm+'m' : h+'h') : mm+' 分';
+}
+
+/* ---------- 时段模型 ---------- */
+const PH_ORDER = ['dawn','morning','noon','afternoon','dusk','night','latenight'];
+const PH_CN = {dawn:'清晨', morning:'上午', noon:'中午', afternoon:'下午',
+               dusk:'傍晚', night:'晚上', latenight:'深夜'};
+
+// 用当天的日落时间反推「傍晚」，而不是硬编码 18:00
+function phaseOf(m, sunset){
+  const duskStart = sunset - 50;
+  if(m < 390) return 'dawn';
+  if(m < 630) return 'morning';
+  if(m < 840) return 'noon';
+  if(m < duskStart) return 'afternoon';
+  if(m < sunset + 20) return 'dusk';
+  if(m < 1260) return 'night';
+  return 'latenight';
+}
+
+// 时段契合度：完全命中 1，相邻 0.55，隔一个 0.15，再远 0
+function slotFit(slots, ph){
+  if(!slots || !slots.length) return 0.5;
+  const i = PH_ORDER.indexOf(ph);
+  let best = 0;
+  slots.forEach(s => {
+    const d = Math.abs(PH_ORDER.indexOf(s) - i);
+    best = Math.max(best, d === 0 ? 1 : d === 1 ? 0.55 : d === 2 ? 0.15 : 0);
+  });
+  return best;
+}
+
+/* ---------- 天气（wttr.in，免 Key、CORS 开放，失败就静默降级） ---------- */
+const WX = {ok:false, at:0, err:'', days:{}};
+const WX_KEY = 'cs_wx_v1';
+const WX_TTL = 30*60*1000;   // 半小时缓存，别把人家服务刷挂
+
+function dayKeyOf(dk){
+  const md = {D1:'11-19', D2:'11-20', D3:'11-21', D4:'11-22'}[dk];
+  return new Date().getFullYear() + '-' + md;
+}
+
+function parseClock12(s){
+  const m = String(s).match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if(!m) return null;
+  let h = (+m[1]) % 12;
+  if(/pm/i.test(m[3])) h += 12;
+  return h*60 + (+m[2]);
+}
+
+// wttr 的 j1 不认 lang 参数，自己按 WWO 代码翻一遍常用的
+const WX_CN = {
+  113:'晴', 116:'多云', 119:'阴', 122:'阴天', 143:'薄雾', 176:'局部有雨',
+  200:'雷阵雨', 248:'雾', 260:'冻雾',
+  263:'零星毛毛雨', 266:'毛毛雨', 281:'冻雨', 284:'强冻雨',
+  293:'局部小雨', 296:'小雨', 299:'间歇中雨', 302:'中雨', 305:'间歇大雨', 308:'大雨',
+  311:'小冻雨', 314:'中到大冻雨', 317:'小雨夹雪', 320:'中到大雨夹雪',
+  323:'零星小雪', 326:'小雪', 329:'中雪', 332:'中雪', 335:'大雪', 338:'大雪',
+  353:'小阵雨', 356:'阵雨', 359:'暴雨', 386:'雷阵雨', 389:'强雷雨'
+};
+function wxCN(code, fallback){ return WX_CN[code] || fallback || '天气未知'; }
+
+function parseWttr(j){
+  const out = {};
+  (j.weather || []).forEach(function(w){
+    const hours = [];
+    (w.hourly || []).forEach(function(x){
+      const code = +x.weatherCode || 0;
+      hours.push({
+        t: Math.round((+x.time)/100)*60,          // "0".."2100" → 分钟
+        rain: +x.chanceofrain || 0,
+        mm: parseFloat(x.precipMM) || 0,
+        temp: +x.tempC,
+        code: code,
+        desc: wxCN(code, (x.weatherDesc && x.weatherDesc[0] && x.weatherDesc[0].value) || '')
+      });
+    });
+    out[w.date] = {
+      tmax: Math.round(+w.maxtempC),
+      tmin: Math.round(+w.mintempC),
+      sunset: (w.astronomy && w.astronomy[0] && parseClock12(w.astronomy[0].sunset)) || null,
+      hours: hours
+    };
+  });
+  return out;
+}
+
+async function loadWX(){
+  try{
+    const c = JSON.parse(localStorage.getItem(WX_KEY) || 'null');
+    if(c && (Date.now() - c.at) < WX_TTL && c.days){
+      WX.ok = true; WX.at = c.at; WX.days = c.days;
+      applySunset(); renderAll();
+      return;
+    }
+  }catch(e){}
+
+  try{
+    const ctl = new AbortController();
+    const timer = setTimeout(function(){ ctl.abort(); }, 6000);
+    const r = await fetch('https://wttr.in/Changsha?format=j1&lang=zh', {signal: ctl.signal});
+    clearTimeout(timer);
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const j = JSON.parse(await r.text());
+    WX.days = parseWttr(j);
+    WX.ok = true; WX.at = Date.now(); WX.err = '';
+    try{ localStorage.setItem(WX_KEY, JSON.stringify({at:WX.at, days:WX.days})); }catch(e){}
+    applySunset();
+  }catch(e){
+    WX.ok = false;
+    WX.err = '天气暂时取不到，先按晴好天气排';
+  }
+  renderAll();
+}
+
+// 用预报的日落校准硬编码值（差个两三分钟会影响「摸黑」判断）
+function applySunset(){
+  Object.keys(DAYS).forEach(function(dk){
+    const w = WX.days[dayKeyOf(dk)];
+    if(w && w.sunset) DAYS[dk].sunset = w.sunset;
+  });
+}
+
+// 下雨时给户外项找一个就近的室内替代
+function indoorAlt(it, atMin){
+  if(!it.outdoor) return null;
+  const used = new Set(DAYS[state.day].items.map(function(x){ return x.name; }));
+  const list = POOL.filter(function(p){
+    if(p.outdoor) return false;
+    if(used.has(p.name)) return false;
+    const tv = TRAVEL[it.zone][p.zone];
+    if(tv == null || tv > 25) return false;                       // 下雨别跑远
+    // 差 15 分钟内开门也算能去（走过去刚好开门）
+    if(p.open && atMin != null && (atMin >= p.open[1] - 5 || atMin < p.open[0] - 15)) return false;
+    return true;
+  });
+  if(!list.length) return null;
+  // 优先同片区 → 关门晚的（能待得久）→ 路上近的
+  list.sort(function(a,b){
+    const za = a.zone === it.zone ? 0 : 1, zb = b.zone === it.zone ? 0 : 1;
+    if(za !== zb) return za - zb;
+    const oa = a.open ? a.open[1] : 1440, ob = b.open ? b.open[1] : 1440;
+    if(oa !== ob) return ob - oa;
+    return (TRAVEL[it.zone][a.zone] || 0) - (TRAVEL[it.zone][b.zone] || 0);
+  });
+  return list[0];
+}
+
+// 某段时间内的最大降水概率；wttr 是 3 小时一格
+function rainWindow(dk, start, dur){
+  const w = WX.days[dayKeyOf(dk)];
+  if(!w || !w.hours.length) return null;
+  const end = start + (dur || 0);
+  const hit = w.hours.filter(function(h){ return h.t + 180 > start && h.t < end; });
+  if(!hit.length) return null;
+  let mx = 0, mm = 0;
+  hit.forEach(function(h){ mx = Math.max(mx, h.rain); mm += h.mm; });
+  return {rain: mx, mm: mm};
+}
+
+// 把连续的雨段压成「17–20 点」这种说法
+function rainSpan(dk){
+  const w = WX.days[dayKeyOf(dk)];
+  if(!w) return null;
+  const wet = w.hours.filter(function(h){ return h.rain >= 50; });
+  if(!wet.length) return null;
+  const first = wet[0].t, last = wet[wet.length-1].t + 180;
+  const peak = Math.max.apply(null, wet.map(function(h){ return h.rain; }));
+  return {from:first, to:last, peak:peak};
+}
+
+/* ---------- 核心：重排 ---------- */
+function parseT(s){ const a = String(s).split(':'); return (+a[0])*60 + (+a[1]); }
+
+function replan(){
+  const day = DAYS[state.day];
+  const now = nowMin();
+  // 今天 / 手动演练时刻 → 都按「现在」处理，之前的行程视为已过点
+  const live = isSameDay(state.day) || state.clock != null;
+
+  // 已完成项实际消耗掉的时间，作为时间下限，防止时间线倒退
+  let floor = day.start;
+  for(const it of day.items){
+    if(state.done[it.id]) floor = Math.max(floor, parseT(it.t) + it.dur);
+  }
+  const firstPending = day.items.find(it => !state.done[it.id] && !state.skip[it.id]);
+
+  // 原计划已经过去、但没打勾的项 → 判为「已过点」，不占时间轴
+  const pastIds = new Set();
+  if(live){
+    for(const it of day.items){
+      if(state.done[it.id] || state.skip[it.id]) continue;
+      if(parseT(it.t) + it.dur <= now) pastIds.add(it.id);
+    }
+  }
+
+  let cursor = live
+    ? Math.max(now, day.start, floor)
+    : Math.max(day.start, floor, firstPending ? parseT(firstPending.t) : day.start);
+
+  const out = [];
+  let prevZone = state.loc;
+
+  for(const it of day.items){
+    if(state.done[it.id]){
+      out.push(Object.assign({}, it, {stat:'done', showT:it.t}));
+      prevZone = it.zone;
+      continue;
+    }
+    if(state.skip[it.id]){
+      out.push(Object.assign({}, it, {stat:'skip', showT:it.t}));
+      continue; // 跳过 = 没去，位置不变
+    }
+    if(pastIds.has(it.id)){
+      out.push(Object.assign({}, it, {stat:'past', showT:it.t}));
+      continue; // 已过点，不推进时间轴
+    }
+
+    let move = TRAVEL[prevZone][it.zone];
+    if(move === undefined) move = 15;
+    if(move <= 8) move = 0;
+    cursor += move;
+
+    if(it.notBefore) cursor = Math.max(cursor, it.notBefore);
+
+    let late = '', blocked = '';
+    if(it.win){
+      const o = it.win[0], c = it.win[1];
+      // win = [开放时间, 停止入场时间]。只要在停止入场前赶到就能进，进去后逛到闭园另算
+      if(cursor > c) blocked = '已过停止入场时间（' + fmt(c) + '）';
+      else if(cursor < o) cursor = o;
+      else if(cursor + it.dur > c + 30) late = '进去时已接近尾声，参观时间会紧';
+    }
+    if(!blocked && it.outdoor && !it.nightOk && day.sunset && cursor + it.dur > day.sunset){
+      late = '会摸黑，日落后体验打折';
+    }
+    if(!blocked && cursor + it.dur > day.end){
+      blocked = '超出今天可用时间（' + fmt(day.end) + ' 结束）';
+    }
+
+    out.push(Object.assign({}, it, {
+      stat: blocked ? 'dead' : (late ? 'late' : 'ok'),
+      showT: fmt(cursor), start: cursor, move: move, blocked: blocked, late: late
+    }));
+    // 判死的项去不成，不占时间、也不改变你的位置
+    if(!blocked){ cursor += it.dur; prevZone = it.zone; }
+  }
+
+  return {list:out, cursor:cursor, day:day, live:live, isToday:isSameDay(state.day),
+          now:now, pastIds:pastIds};
+}
+
+function isSameDay(dk){
+  const map = {D1:'11-19', D2:'11-20', D3:'11-21', D4:'11-22'};
+  const d = new Date();
+  const md = pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  return map[dk] === md;
+}
+
+/* ---------- 推荐 ---------- */
+// 下一个「还去得了」的项；已经判死的不算，它不占时间
+function nextPending(list){
+  return list.find(x => x.stat==='ok' || x.stat==='late') || null;
+}
+
+// 这个时段该不该吃饭：如果 90 分钟内已经有排好的吃项，就不催
+function needMeal(plan, phase, ref){
+  const pend = plan.list.filter(x => x.type==='吃' && (x.stat==='ok'||x.stat==='late'));
+  if(pend.some(x => x.start != null && x.start <= ref + 90)) return '';
+  if(phase==='morning') return '早饭';
+  if(phase==='noon') return '午饭';
+  if(phase==='dusk' || phase==='night') return '晚饭';
+  if(phase==='latenight') return '夜宵';
+  return '';
+}
+
+function recommend(plan){
+  const {list, cursor, day} = plan;
+  const live = plan.live;
+  const ref = live ? Math.min(nowMin(), day.end) : cursor;
+  const phase = phaseOf(ref, day.sunset);
+  const remainAll = Math.max(0, day.end - ref);
+
+  // 当前所在片区：最后一个真实经过的点（跳过的、已过点的都不算）
+  let curZone = state.loc;
+  for(let i = list.length-1; i >= 0; i--){
+    const st = list[i].stat;
+    if(st !== 'skip' && st !== 'past' && list[i].zone){ curZone = list[i].zone; break; }
+  }
+
+  const next = nextPending(list);
+  const gapEnd = (live && next) ? Math.max(ref, next.start) : day.end;
+
+  const used = new Set();
+  list.forEach(x => { if(x.stat !== 'skip' && x.stat !== 'past') used.add(x.name); });
+  const meal = needMeal(plan, phase, ref);
+
+  let lastType = '';
+  for(let i = list.length-1; i >= 0; i--){
+    const st = list[i].stat;
+    if(st === 'done' || st === 'ok' || st === 'late'){ lastType = list[i].type; break; }
+  }
+
+  const cands = [];
+  for(const p of POOL){
+    if(used.has(p.name)) continue;
+
+    const tvIn = TRAVEL[curZone][p.zone];
+    const gap = (tvIn == null) ? 20 : (tvIn <= 8 ? 0 : tvIn);
+    const tvOut = TRAVEL[p.zone][next ? next.zone : curZone];
+    const back = (tvOut == null) ? 15 : (tvOut <= 8 ? 0 : tvOut);
+    const arrive = ref + gap;
+    const need = p.dur + gap + back;
+    // 下一项是吃饭的，晚到 20 分钟问题不大；有闭馆时间的景点，一分钟都不能让
+    const slack = next ? (next.type === '吃' ? 25 : (next.win ? 5 : 10)) : 0;
+    const limit = gapEnd + slack;
+
+    let rej = '';
+    if(p.open){
+      const o = p.open[0], c = p.open[1];
+      if(arrive >= c - 5) rej = '这个点已经不让人进了（' + fmt(c) + ' 停止进入）';
+      else if(arrive < o) rej = fmt(o) + ' 才开门';
+    }
+    // 必须在下一项开始前「回来」，所以回程也要算进去
+    // 下雨：户外的点直接判不合适，室内的反而加分
+    const rw = rainWindow(state.day, arrive, p.dur);
+    if(!rej && rw && p.outdoor && rw.rain >= 55)
+      rej = '这个时段降水概率 ' + rw.rain + '%，户外的点不合适';
+    if(!rej && arrive + p.dur + back > limit) rej = '空档不够，这一趟连来带回去要 ' + fmtDur(need);
+    if(!rej && !next && arrive + p.dur + back > day.end) rej = '收尾时间不够，这一趟要 ' + fmtDur(need);
+    if(rej){ cands.push(Object.assign({}, p, {rej:rej, score:-1})); continue; }
+
+    const fit = slotFit(p.slots, phase);
+    let score = 0;
+    score += 46 * fit;                                                     // 时段对不对，权重最高
+    score += 16 * (1 - Math.min(gap + back, 60) / 60);                     // 来回是否便宜
+    score += 14 * (1 - Math.min(need, remainAll) / Math.max(remainAll, 1));// 时间是否宽裕
+    score += (lastType && p.type !== lastType) ? 10 : 0;                   // 别连着两个同类型
+    if(rw && p.outdoor && rw.rain >= 30) score -= 22;                      // 可能淋雨
+    if(rw && !p.outdoor && rw.rain >= 50) score += 12;                     // 下雨就往室内钻
+    if(meal && p.type === '吃') score += 26;
+    if(!meal && p.type === '吃') score -= 6;
+    // 不是饭点就别推饭馆，除非它就是最合适的
+    if(!meal && p.type === '吃' && fit < 0.5) continue;
+
+    const tips = [fmt(arrive) + ' 到，路上 ' + (gap ? gap + ' 分' : '几分钟')];
+    if(back) tips.push('回来还要 ' + back + ' 分');
+    if(rw && p.outdoor && rw.rain >= 30) tips.push('降水概率 ' + rw.rain + '%，带把伞');
+
+    cands.push(Object.assign({}, p, {
+      gap:gap, back:back, arrive:arrive, need:need, fit:fit, score:score,
+      timeTip: tips.join(' · ')
+    }));
+  }
+
+  let ok = cands.filter(c => c.score >= 0).sort((a,b) => b.score - a.score);
+  // 时段对得上的优先；一个都没有时再退回「勉强能去」
+  const strong = ok.filter(c => c.fit >= 0.5);
+  if(strong.length) ok = strong;
+
+  // 主建议：下一项 20 分钟内要开始，就先别塞新东西
+  let hero = null;
+  if(live && next){
+    const d = next.start - ref;
+    if(d <= 30) hero = {kind:'next', item:next, d:d};
+  }
+  if(!hero && ok.length) hero = {kind:'poi', item:ok[0]};
+  if(!hero && live && next) hero = {kind:'next', item:next, d:next.start - ref};
+
+  return {
+    hero: hero,
+    alts: ok.filter(c => !hero || c !== hero.item).slice(0, 3),
+    blocked: cands.filter(c => c.score < 0)
+      .sort(function(a,b){
+        const w = x => x.rej.indexOf('不让人进') >= 0 ? 0 : (x.rej.indexOf('才开门') >= 0 ? 1 : 2);
+        return w(a) - w(b);
+      }).slice(0, 2),
+    phase: phase, ref: ref, remainAll: remainAll, curZone: curZone,
+    next: next, meal: meal, live: live,
+    gapLeft: (live && next) ? Math.max(0, next.start - ref) : remainAll
+  };
+}
+
+/* ---------- 高德导航链接 ---------- */
+function resolveGeo(item){
+  const hit = findGeo(item.name);
+  if(hit) return hit;
+  const c = ZONE_CENTER[item.zone];
+  if(c) return { key: ZONE_CN[item.zone], lng: c[0], lat: c[1], approx: true };
+  return null;
+}
+
+function navURL(item, mode){
+  const g = resolveGeo(item);
+  const q = encodeURIComponent(cleanName(item.name));
+  if(!g) return 'https://uri.amap.com/search?keyword=' + q + '&city=' + encodeURIComponent('长沙') + '&callnative=1';
+  return 'https://uri.amap.com/navigation?to=' + g.lng + ',' + g.lat + ',' + encodeURIComponent(g.key)
+    + '&mode=' + (mode || 'walk') + '&coordinate=gaode&callnative=1&src=cs-live';
+}
+
+function searchURL(item){
+  return 'https://uri.amap.com/search?keyword=' + encodeURIComponent(cleanName(item.name))
+    + '&city=' + encodeURIComponent('长沙') + '&callnative=1';
+}
+
+/* ---------- 渲染 ---------- */
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = Object.keys(DAYS).map(k =>
+    `<button data-d="${k}" class="${state.day===k?'on':''}">${k} ${DAYS[k].date.split(' ')[1]}</button>`
+  ).join('');
+  el.querySelectorAll('button').forEach(b => {
+    b.onclick = () => { state.day = b.dataset.d; save(); renderAll(); };
+  });
+}
+
+function renderLoc(){
+  if(!state.locName || state.locName === undefined){
+    state.locName = SPOTS[0][0];
+    state.loc = SPOTS[0][1];
+  }
+  const el = document.getElementById('loc');
+  el.innerHTML = SPOTS.map(([n,z]) =>
+    `<option value="${z}" ${state.locName===n?'selected':''}>${n}</option>`
+  ).join('');
+  const idx = SPOTS.findIndex(([n]) => n === state.locName);
+  el.selectedIndex = idx >= 0 ? idx : 0;
+  el.onchange = () => {
+    const [n,z] = SPOTS[el.selectedIndex];
+    state.locName = n; state.loc = z;
+    state.geo = null;          // 手动选了就按手动来，别和 GPS 打架
+    save(); renderAll();
+  };
+}
+
+function renderFeed(plan){
+  const el = document.getElementById('feed');
+  const pastN = plan.list.filter(x => x.stat==='past').length;
+  const notice = pastN ? `<div class="notice">有 ${pastN} 项原定时间已经过去、你还没打勾。默认当作没去，
+      <button data-act="alldone">这些其实都去了</button></div>` : '';
+  el.innerHTML = notice + plan.list.map(x => {
+    const cls = (x.stat==='done'?'done':x.stat==='skip'?'skip':x.stat==='late'?'late'
+              :x.stat==='past'?'past':'') + ' st-' + x.stat;
+    const tags = [];
+    if(x.stat==='done') tags.push('<span class="tag g">已完成</span>');
+    if(x.stat==='skip') tags.push('<span class="tag">已跳过</span>');
+    if(x.stat==='late') tags.push('<span class="tag a">偏晚</span>');
+    if(x.stat==='dead') tags.push('<span class="tag r">来不及</span>');
+    if(x.stat==='past') tags.push('<span class="tag">已过点</span>');
+    if(x.win) tags.push('<span class="tag">需预约/有闭馆</span>');
+    const btns = x.stat==='done' || x.stat==='skip' ? '' :
+      `<button class="ok" data-act="done" data-id="${x.id}">到了</button>
+       <button class="no" data-act="skip" data-id="${x.id}">跳过</button>`;
+    const rwx = x.start != null ? rainWindow(state.day, x.start, x.dur) : null;
+    const altIn = (rwx && rwx.rain >= 50) ? indoorAlt(x, x.start) : null;
+    const wet = (rwx && x.outdoor && rwx.rain >= 50)
+      ? '预报这个时段 ' + rwx.rain + '% 有雨' + (altIn ? '，可以换成「' + altIn.name + '」' : '，户外项建议改天')
+      : '';
+    let wetBtn = '';
+    if(x.origName && x.stat !== 'done' && x.stat !== 'skip'){
+      wetBtn = `<button data-act="revert" data-id="${x.id}">还原为${x.origName}</button>`;
+    } else if(altIn && x.stat !== 'done' && x.stat !== 'skip'){
+      wetBtn = `<button data-act="swap" data-id="${x.id}" data-alt="${altIn.name}">换成${altIn.name}</button>`;
+    }
+    const warn = (x.blocked || x.late || wet)
+      ? `<div class="warn">${x.blocked || x.late || wet}</div>` : '';
+    const move = (x.move && x.stat!=='done' && x.stat!=='skip' && x.stat!=='past') ? `<span>路程 ${x.move} 分</span>` : '';
+    const g = resolveGeo(x);
+    const mode = (x.move && x.move > 0) ? 'bus' : 'walk';
+    const modeCN = mode === 'bus' ? '公交' : '步行';
+    const navBtns = `<div class="acts">
+      <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
+      ${wetBtn}
+      ${btns}
+    </div>`;
+    return `<div class="row ${cls}" data-id="${x.id}">
+      <div class="t">${x.showT || x.t}</div>
+      <div class="bod">
+        <h4>${x.name}${tags.join('')}</h4>
+        <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur} 分</span>${move}</div>
+        ${warn}${navBtns}
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.row').forEach(function(r){
+    r.onclick = function(ev){
+      if(ev.target.closest('button, a')) return;
+      if(!lastPlan) return;
+      const x = lastPlan.list.find(function(y){ return y.id === r.dataset.id; });
+      if(x && MAP.map) mapLocate(x);
+    };
+  });
+
+  el.querySelectorAll('button[data-act]').forEach(b => {
+    b.onclick = () => {
+      if(b.dataset.act === 'swap'){ swapItem(b.dataset.id, b.dataset.alt); return; }
+      if(b.dataset.act === 'revert'){ revertItem(b.dataset.id); return; }
+      if(b.dataset.act === 'alldone'){
+        plan.list.forEach(x => { if(x.stat==='past'){ state.done[x.id] = 1; delete state.skip[x.id]; } });
+        save(); renderAll(); return;
+      }
+      const id = b.dataset.id;
+      if(b.dataset.act === 'done'){ state.done[id] = !state.done[id]; delete state.skip[id]; }
+      else { state.skip[id] = !state.skip[id]; delete state.done[id]; }
+      save(); renderAll();
+    };
+  });
+}
+
+function renderReco(plan, reco){
+  const el = document.getElementById('reco');
+
+  const head = '<div class="head">现在 <b>' + fmt(reco.ref) + '</b> · ' + PH_CN[reco.phase]
+    + (reco.live ? '' : ' · 按计划演练')
+    + (reco.meal ? ' · <b>' + reco.meal + '</b>时间' : '')
+    + '<br><span class="dim">' + (reco.next
+        ? '下一项 ' + fmt(reco.next.start) + ' ' + reco.next.name + '，还有 ' + fmtDur(reco.gapLeft)
+        : '今天排的项都走完了，还能自由安排 ' + fmtDur(reco.remainAll)) + '</span></div>';
+
+  let heroHtml = '';
+  if(reco.hero && reco.hero.kind === 'next'){
+    const it = reco.hero.item;
+    const m = (it.move && it.move > 0) ? 'bus' : 'walk';
+    heroHtml = '<div class="hero">'
+      + '<div class="hk">接下来就是它，别再塞新的了</div>'
+      + '<h4>' + fmt(it.start || parseT(it.t)) + '　' + it.name + '</h4>'
+      + '<p>' + (reco.hero.d > 0 ? '还有 ' + fmtDur(reco.hero.d) + '，' : '已经到点了，')
+      + (it.blocked || it.late || '按计划推进就行') + '</p>'
+      + '<div class="acts">'
+      + '<a class="navbtn" href="' + navURL(it, m) + '" target="_blank" rel="noopener">导航 · ' + (m==='bus'?'公交':'步行') + '</a>'
+      + '<a class="navbtn g" href="' + searchURL(it) + '" target="_blank" rel="noopener">搜地图</a>'
+      + '</div></div>';
+  } else if(reco.hero){
+    const p = reco.hero.item;
+    const m = p.gap > 0 ? 'bus' : 'walk';
+    heroHtml = '<div class="hero">'
+      + '<div class="hk">' + (p.fit < 0.4
+          ? '空档只有 ' + fmtDur(reco.gapLeft) + '，就近凑一下'
+          : PH_CN[reco.phase] + ' ' + fmt(reco.ref) + '，现在最该去这') + '</div>'
+      + '<h4>' + p.name + '</h4>'
+      + '<p>' + p.why + '</p>'
+      + '<p class="dim">' + p.timeTip + ' · 玩 ' + p.dur + ' 分，' + fmt(p.arrive + p.dur) + ' 撤</p>'
+      + '<div class="acts">'
+      + '<a class="navbtn" href="' + navURL(p, m) + '" target="_blank" rel="noopener">导航 · ' + (m==='bus'?'公交':'步行') + '</a>'
+      + '<a class="navbtn g" href="' + searchURL(p) + '" target="_blank" rel="noopener">搜地图</a>'
+      + '<button data-n="' + p.name + '">加入今天</button>'
+      + '</div></div>';
+  } else {
+    heroHtml = '<div class="empty">这个点没什么能塞的了。'
+      + (reco.meal ? '先把' + reco.meal + '解决，然后回酒店。' : '回酒店休息吧，明天再战。') + '</div>';
+  }
+
+  const alts = reco.alts.length
+    ? '<div class="sub">备选（按合适程度排）</div>' + reco.alts.map(function(p,i){
+        const m = p.gap > 0 ? 'bus' : 'walk';
+        return '<div class="rc">'
+          + '<div class="n">' + (i+2) + '</div>'
+          + '<div class="bod"><h4>' + p.name + '</h4>'
+          + '<p>' + p.why + '</p>'
+          + '<p class="dim">' + p.timeTip + ' · 玩 ' + p.dur + ' 分 · 合计 ' + fmtDur(p.need) + '</p></div>'
+          + '<button data-n="' + p.name + '">加入</button>'
+          + '</div>';
+      }).join('')
+    : '';
+
+  const blocked = reco.blocked.length
+    ? '<div class="sub">这些现在去不了</div>' + reco.blocked.map(function(p){
+        return '<div class="rc dim"><div class="n">×</div><div class="bod"><h4>' + p.name + '</h4>'
+          + '<p>' + p.rej + '</p></div></div>';
+      }).join('')
+    : '';
+
+  el.innerHTML = head + heroHtml + alts + blocked;
+
+  el.querySelectorAll('button[data-n]').forEach(function(b){
+    b.onclick = function(){
+      const p = (reco.alts || []).find(function(x){ return x.name === b.dataset.n; })
+             || (reco.hero && reco.hero.item && reco.hero.item.name === b.dataset.n ? reco.hero.item : null);
+      if(p) addToDay(p);
+    };
+  });
+}
+
+function swapItem(id, altName){
+  const day = DAYS[state.day];
+  const it = day.items.find(function(x){ return x.id === id; });
+  if(!it) return;
+  const alt = POOL.find(function(p){ return p.name === altName; });
+  if(!alt) return;
+  if(!it.origName){   // 记一下原样，方便还原
+    it.origName = it.name; it.origZone = it.zone; it.origDur = it.dur;
+    it.origType = it.type; it.origWin = it.win; it.origOutdoor = it.outdoor;
+    it.origNightOk = it.nightOk;
+  }
+  it.name = alt.name;
+  it.zone = alt.zone;
+  it.dur = alt.dur;
+  it.type = alt.type;
+  it.win = alt.open || null;
+  it.outdoor = alt.outdoor || 0;
+  delete it.nightOk;
+  save(); renderAll();
+}
+
+function revertItem(id){
+  const it = DAYS[state.day].items.find(function(x){ return x.id === id; });
+  if(!it || !it.origName) return;
+  it.name = it.origName; it.zone = it.origZone; it.dur = it.origDur;
+  it.type = it.origType; it.win = it.origWin; it.outdoor = it.origOutdoor;
+  if(it.origNightOk) it.nightOk = it.origNightOk;
+  delete it.origName; delete it.origZone; delete it.origDur;
+  delete it.origType; delete it.origWin; delete it.origOutdoor; delete it.origNightOk;
+  save(); renderAll();
+}
+
+function addToDay(p){
+  const day = DAYS[state.day];
+  const id = 'x' + Date.now();
+  day.items.push({id:id, t:fmt(nowMin()), name:p.name, zone:p.zone, dur:p.dur,
+    type:p.type, win:(p.open || p.win || null), outdoor:p.outdoor});
+  save(); renderAll();
+}
+
+function renderSummary(plan){
+  const {list, cursor, day, live} = plan;
+  const left = list.filter(x => x.stat==='ok' || x.stat==='late');
+  const dead = list.filter(x => x.stat==='dead');
+  const past = list.filter(x => x.stat==='past');
+  const doneN = list.filter(x => x.stat==='done').length;
+  let h = '已完成 <b>' + doneN + '</b> 项，还剩 <b>' + left.length + '</b> 项可去。'
+        + '按当前节奏，最后一项结束在 <b>' + fmt(cursor) + '</b>。';
+  if(past.length) h += '<br><span style="color:#A9701B">有 ' + past.length + ' 项原定时间已经过去、又没打勾，暂时按「没去」处理。如果其实去了，点一下那行的「到了」。</span>';
+  if(dead.length) h += '<br><span style="color:#B33A2B">有 ' + dead.length + ' 项来不及，已在列表标出，可点「跳过」清掉。</span>';
+  if(!live) h += '<br><span class="dim">现在是按原计划顺序预演；点顶部时间可以切到「按某一刻走」，结果会跟真实时间走。</span>';
+  document.getElementById('summary').innerHTML = h;
+}
+
+function renderStat(plan){
+  const {cursor, day, live} = plan;
+  const remain = Math.max(0, day.end - (live ? nowMin() : cursor));
+  document.getElementById('stat').innerHTML =
+    DAYS[state.day].date + '<br>' + (live ? '到收工还有' : '计划剩余') + ' <b>' + fmtDur(remain) + '</b>';
+}
+
+function renderClock(){
+  const el = document.getElementById('clock');
+  el.innerHTML = fmt(nowMin()) + '<small>' + (state.clock == null ? '现在' : '演练') + '</small>';
+  el.classList.toggle('sim', state.clock != null);
+  const bar = document.getElementById('clockbar');
+  bar.classList.toggle('on', state.clock !== null || bar.dataset.open === '1');
+}
+
+/* ---------- 定位：WGS84 → GCJ-02（高德坐标） ---------- */
+function wgs2gcj(lng, lat){
+  const a = 6378245.0, ee = 0.00669342162296594323;
+  function tLat(x, y){
+    let r = -100.0 + 2.0*x + 3.0*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+    r += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0/3.0;
+    r += (20.0*Math.sin(y*Math.PI) + 40.0*Math.sin(y/3.0*Math.PI)) * 2.0/3.0;
+    r += (160.0*Math.sin(y/12.0*Math.PI) + 320*Math.sin(y*Math.PI/30.0)) * 2.0/3.0;
+    return r;
+  }
+  function tLng(x, y){
+    let r = 300.0 + x + 2.0*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+    r += (20.0*Math.sin(6.0*x*Math.PI) + 20.0*Math.sin(2.0*x*Math.PI)) * 2.0/3.0;
+    r += (20.0*Math.sin(x*Math.PI) + 40.0*Math.sin(x/3.0*Math.PI)) * 2.0/3.0;
+    r += (150.0*Math.sin(x/12.0*Math.PI) + 300.0*Math.sin(x/30.0*Math.PI)) * 2.0/3.0;
+    return r;
+  }
+  const dLat = tLat(lng - 105.0, lat - 35.0);
+  const dLng = tLng(lng - 105.0, lat - 35.0);
+  const radLat = lat / 180.0 * Math.PI;
+  let magic = Math.sin(radLat);
+  magic = 1 - ee * magic * magic;
+  const sq = Math.sqrt(magic);
+  const mgLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sq) * Math.PI);
+  const mgLng = (dLng * 180.0) / (a / sq * Math.cos(radLat) * Math.PI);
+  return [lng + mgLng, lat + mgLat];
+}
+
+function distM(lng1, lat1, lng2, lat2){
+  const R = 6371000, rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad, dLng = (lng2 - lng1) * rad;
+  const h = Math.pow(Math.sin(dLat/2), 2)
+          + Math.cos(lat1*rad) * Math.cos(lat2*rad) * Math.pow(Math.sin(dLng/2), 2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function distText(m){
+  return m < 1000 ? Math.round(m) + ' 米' : (m/1000).toFixed(1) + ' 公里';
+}
+
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){ t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  t.textContent = msg;
+  t.className = 'on';
+  clearTimeout(t._tm);
+  t._tm = setTimeout(function(){ t.className = ''; }, 3600);
+}
+
+const HTTPS_SITE = 'https://youguqiubai.github.io/badminton-map/changsha/';
+
+function nearestSpot(lng, lat){
+  let best = null, bd = Infinity;
+  SPOTS.forEach(function(s){
+    const d = distM(lng, lat, s[2], s[3]);
+    if(d < bd){ bd = d; best = s; }
+  });
+  return {spot: best, d: bd};
+}
+
+function autoLocate(){
+  const btn = document.getElementById('geobtn');
+
+  if(!navigator.geolocation){
+    toast('这个浏览器不支持定位，用上面的下拉手动选');
+    return;
+  }
+  // 浏览器只在 https 或 localhost 下给定位
+  if(!window.isSecureContext){
+    toast('定位需要 HTTPS：' + HTTPS_SITE + '（当前是 http 地址）');
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = '定位中';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    btn.disabled = false; btn.textContent = '定位';
+    const g = wgs2gcj(pos.coords.longitude, pos.coords.latitude);
+    const acc = pos.coords.accuracy || 0;
+    const hit = nearestSpot(g[0], g[1]);
+    if(!hit.spot){
+      toast('定位到了，但不在长沙范围（' + g[0].toFixed(4) + ',' + g[1].toFixed(4) + '）');
+      return;
+    }
+    state.geo = [g[0], g[1]];
+    state.geoAcc = acc;
+    state.loc = hit.spot[1];              // 片区用于重排，这个不会错
+    // 地名只做参考：五一商圈一带的点彼此只差 100~300 米，GPS 分不清谁是谁
+    if(hit.d <= 120) state.locName = hit.spot[0];
+    save();
+    renderAll();
+
+    const zoneCN = ZONE_CN[hit.spot[1]];
+    let msg;
+    if(hit.d <= 120)      msg = '你在「' + hit.spot[0] + '」';
+    else if(hit.d <= 600) msg = '你在' + zoneCN + '，「' + hit.spot[0] + '」就在 ' + distText(hit.d) + ' 外';
+    else                  msg = '你在' + zoneCN + '一带，最近的是「' + hit.spot[0] + '」' + distText(hit.d);
+    toast(msg + '　GPS 精度 ±' + Math.round(acc) + ' 米');
+  }, function(err){
+    btn.disabled = false; btn.textContent = '定位';
+    const msg = {1:'你拒绝了位置权限，去浏览器设置里重新打开',
+                 2:'定位不可用，可能在地下或信号差',
+                 3:'定位超时，再试一次'}[err.code] || '定位失败';
+    toast(msg);
+  }, {enableHighAccuracy: true, timeout: 12000, maximumAge: 30000});
+}
+
+/* ---------- 高德地图 ---------- */
+const MAPK = 'cs_amap_v1';
+const MAP = {key:'', sec:'', map:null, markers:[], line:null, info:null, loading:false, err:'', ready:false};
+let lastPlan = null;
+
+(function loadMapCfg(){
+  try{
+    const c = JSON.parse(localStorage.getItem(MAPK) || 'null');
+    if(c){ MAP.key = c.key || ''; MAP.sec = c.sec || ''; }
+  }catch(e){}
+}());
+
+function saveMapCfg(key, sec){
+  MAP.key = key; MAP.sec = sec;
+  try{ localStorage.setItem(MAPK, JSON.stringify({key:key, sec:sec})); }catch(e){}
+}
+
+function loadAmpLib(){
+  return new Promise(function(res, rej){
+    if(window.AMap) return res();
+    if(MAP.loading) return rej(new Error('正在加载…'));
+    MAP.loading = true;
+    if(MAP.sec) window._AMapSecurityConfig = {securityJsCode: MAP.sec};
+    const el = document.createElement('script');
+    el.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(MAP.key) + '&plugin=AMap.Scale';
+    el.onload = function(){ MAP.loading = false; res(); };
+    el.onerror = function(){ MAP.loading = false; rej(new Error('高德脚本没加载出来，检查网络')); };
+    document.head.appendChild(el);
+  });
+}
+
+function renderMapSet(){
+  const box = document.getElementById('mapnoset');
+  if(!box) return;
+  box.style.display = 'flex';
+  box.innerHTML = '<b>看地图前，先填一次高德 Key</b>'
+    + '<span>高德控制台 → 应用管理 → 新建 Key，服务平台选「<b>Web端(JS API)</b>」<br>'
+    + '同一应用里的「安全密钥」也要填，不填地图会报 INVALID_USER_SCODE</span>'
+    + '<input id="mk1" placeholder="Web端(JS API) 的 Key" autocomplete="off" spellcheck="false">'
+    + '<input id="mk2" placeholder="安全密钥 jscode" autocomplete="off" spellcheck="false">'
+    + '<button id="mksave">保存并加载地图</button>'
+    + '<span>只存这台手机，页面源码里没有 Key</span>';
+
+  const k1 = document.getElementById('mk1');
+  k1.value = MAP.key || '';
+  document.getElementById('mk2').value = MAP.sec || '';
+  document.getElementById('mksave').onclick = function(){
+    const a = k1.value.trim(), b = document.getElementById('mk2').value.trim();
+    if(!a){ alert('Key 不能为空'); return; }
+    saveMapCfg(a, b);
+    MAP.err = ''; MAP.ready = false;
+    if(MAP.map){ MAP.map.destroy(); MAP.map = null; }
+    initMap();
+  };
+}
+
+async function initMap(){
+  if(!MAP.key){ renderMapSet(); return; }
+  const box = document.getElementById('mapnoset');
+  if(box){ box.style.display = 'none'; }
+
+  try{
+    await loadAmpLib();
+    if(!MAP.map){
+      MAP.map = new AMap.Map('map', {
+        zoom: 13,
+        center: [112.9775, 28.1957],
+        viewMode: '2D',
+        zooms: [9, 18],
+        resizeEnable: true,
+        showLabel: true
+      });
+      MAP.map.addControl(new AMap.Scale());
+      MAP.map.on('complete', function(){ MAP.ready = true; });
+    }
+    MAP.err = '';
+  }catch(e){
+    MAP.err = e.message;
+    if(box){
+      box.style.display = 'flex';
+      box.innerHTML = '<b>地图没起来</b><span>' + e.message + '</span>';
+    }
+  }
+  renderMap(lastPlan);
+}
+
+function markerHTML(x, idx){
+  let cls = '';
+  if(x.stat === 'done') cls = ' done';
+  else if(x.stat === 'skip') cls = ' skip';
+  else if(x.stat === 'dead') cls = ' dead';
+  if(x._here) cls += ' here';
+  return '<div class="mk' + cls + '">' + idx + '</div>';
+}
+
+function openInfo(x){
+  if(!MAP.map) return;
+  const g = x._g || resolveGeo(x);
+  if(!g) return;
+  const m = (x.move && x.move > 0) ? 'bus' : 'walk';
+  const t = (x.start != null) ? x.start : parseT(x.t);
+  const html = '<div class="iw"><b>' + x.name + '</b>'
+    + '<div class="d">' + fmt(t) + ' · ' + ZONE_CN[x.zone] + ' · ' + x.dur + ' 分</div>'
+    + '<a href="' + navURL(x, m) + '" target="_blank" rel="noopener">导航过去</a>'
+    + '<a href="' + searchURL(x) + '" target="_blank" rel="noopener" style="background:#F2EEE7;color:#57524C;margin-left:6px">搜地图</a></div>';
+  if(!MAP.info) MAP.info = new AMap.InfoWindow({offset: new AMap.Pixel(0, -14)});
+  MAP.info.setContent(html);
+  MAP.info.open(MAP.map, [g.lng, g.lat]);
+}
+
+function renderMap(plan){
+  if(!plan || !MAP.map) return;
+  const list = plan.list;
+  MAP.map.clearMap();
+  MAP.info = null;
+  MAP.markers = [];
+
+  const path = [];
+  const pos = [];
+  list.forEach(function(x, i){
+    const g = resolveGeo(x);
+    if(!g) return;
+    x._g = g;
+    x._here = !!(state.locName && g.key === state.locName);
+    const mk = new AMap.Marker({
+      position: [g.lng, g.lat],
+      content: markerHTML(x, i + 1),
+      offset: new AMap.Pixel(-13, -13),
+      zIndex: x.stat === 'ok' ? 100 : 50
+    });
+    mk.on('click', function(){ openInfo(x); });
+    MAP.markers.push(mk);
+    pos.push([g.lng, g.lat]);
+    if(x.stat !== 'skip') path.push([g.lng, g.lat]);
+  });
+
+  // 你当前站在哪，单独画一个
+  const home = state.geo || GEO[state.locName];
+  if(home){
+    const me = new AMap.Marker({
+      position: [home[0], home[1]],
+      content: '<div class="mk me">我</div>',
+      offset: new AMap.Pixel(-13, -13),
+      zIndex: 200
+    });
+    MAP.markers.push(me);
+  }
+
+  if(MAP.markers.length){
+    MAP.map.add(MAP.markers);
+    if(path.length > 1){
+      MAP.line = new AMap.Polyline({
+        path: path,
+        strokeColor: '#B33A2B',
+        strokeWeight: 3,
+        strokeOpacity: .7,
+        strokeStyle: 'dashed',
+        strokeDasharray: [8, 6],
+        lineJoin: 'round',
+        showDir: true
+      });
+      MAP.map.add(MAP.line);
+      MAP.map.setFitView(MAP.markers, false, [36, 26, 36, 26]);
+    } else {
+      MAP.map.setZoomAndCenter(15, pos[0]);
+    }
+  }
+
+  const info = document.getElementById('mapinfo');
+  if(info){
+    info.textContent = DAYS[state.day].date + ' · ' + MAP.markers.length + ' 个点'
+      + (state.locName ? ' · 你在' + state.locName : '');
+  }
+}
+
+function mapLocate(x){
+  const g = x._g || resolveGeo(x);
+  if(!MAP.map || !g) return;
+  MAP.map.setZoomAndCenter(16, [g.lng, g.lat]);
+  openInfo(x);
+  const card = document.querySelector('.mapcard');
+  if(card){
+    const y = card.getBoundingClientRect().top + window.pageYOffset - 118;
+    window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
+  }
+}
+
+function bindMapBar(){
+  const fit = document.getElementById('mapfit');
+  if(fit) fit.onclick = function(){
+    if(!MAP.map) return;
+    if(MAP.markers.length) MAP.map.setFitView(MAP.markers, false, [36, 26, 36, 26]);
+  };
+  const setBtn = document.getElementById('mapset');
+  if(setBtn) setBtn.onclick = function(){
+    MAP.err = ''; MAP.ready = false;
+    if(MAP.map){ MAP.map.destroy(); MAP.map = null; }
+    renderMapSet();
+  };
+}
+
+function renderWx(){
+  const el = document.getElementById('wx');
+  if(!el) return;
+  const dk = state.day;
+  const w = WX.days[dayKeyOf(dk)];
+
+  if(!w){
+    el.className = 'wx';
+    el.innerHTML = WX.ok
+      ? '<span class="dim">这一天还没有预报（免费源只给 3 天，到那天再看就有了）</span>'
+      : '<span class="dim">' + (WX.err || '正在取天气…') + '</span>';
+    return;
+  }
+
+  const sp = rainSpan(dk);
+  // 用当天降水概率最高的那格来代表这天的天气，比用 0 点那格准
+  const worst = w.hours.slice().sort(function(a,b){ return b.rain - a.rain; })[0] || {};
+  const desc = worst.desc || '';
+  let h = '<b>' + DAYS[dk].date + '</b>' + (desc ? ' · ' + desc : '')
+        + ' · ' + w.tmin + '~' + w.tmax + '℃';
+  if(sp) h += '<span class="wet">' + fmt(sp.from) + '–' + fmt(sp.to) + ' 有雨，最高 ' + sp.peak + '%</span>';
+  else h += '<span class="dry">全天基本无雨</span>';
+
+  el.innerHTML = h;
+  el.className = 'wx' + (sp ? ' raining' : '');
+}
+
+function renderAll(){
+  const plan = replan();
+  const reco = recommend(plan);
+  lastPlan = plan;
+  renderClock();
+  renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco); renderSummary(plan);
+  if(MAP.map) renderMap(plan);
+  document.getElementById('feedTitle').textContent = DAYS[state.day].date + ' 行程';
+}
+
+/* ---- 时间轴：点顶部时间可切换到「某一刻」演练 ---- */
+document.getElementById('clock').onclick = function(){
+  const bar = document.getElementById('clockbar');
+  bar.dataset.open = bar.dataset.open === '1' ? '0' : '1';
+  bar.classList.toggle('on', bar.dataset.open === '1');
+};
+
+document.querySelectorAll('#clockbar button[data-s]').forEach(function(b){
+  b.onclick = function(){
+    const v = b.dataset.s;
+    if(v === 'now'){ state.clock = null; }
+    else if(v === 'set'){
+      const t = prompt('演练到几点？格式 HH:MM', fmt(nowMin()));
+      if(t && /^\d{1,2}:\d{2}$/.test(t.trim())){
+        const a = t.trim().split(':');
+        state.clock = (+a[0])*60 + (+a[1]);
+      }
+    } else {
+      const base = state.clock == null ? realNow() : state.clock;
+      state.clock = Math.max(0, Math.min(1439, base + (+v)));
+    }
+    save(); renderAll();
+  };
+});
+
+document.getElementById('geobtn').onclick = autoLocate;
+if(!window.isSecureContext){
+  const gb = document.getElementById('geobtn');
+  gb.className = 'warn';
+  gb.title = 'HTTP 下浏览器不给定位，改用 https 地址';
+}
+
+bindMapBar();
+initMap();  // 有 Key 才会真加载，没有就显示填写入口
+loadWX();   // 异步取天气，回来自己会重渲染
+
+document.getElementById('reset').onclick = () => {
+  state.done = {}; state.skip = {}; save(); renderAll();
+};
+
+renderAll();
+setInterval(() => {
+  document.getElementById('clock').innerHTML = fmt(nowMin()) + '<small>现在</small>';
+}, 20000);
+</script>
+</body>
+</html>
