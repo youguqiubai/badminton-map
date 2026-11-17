@@ -2,6 +2,8 @@
 
 按定位或手动选城市，检索该地区的羽毛球馆并在地图上查看。基于高德地图 POI 实时检索，不内置任何数据，也不内置任何 Key。
 
+在线 Demo：**https://youguqiubai.github.io/badminton-map/**
+
 ![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=fff)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
