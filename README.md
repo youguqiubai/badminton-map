@@ -73,7 +73,10 @@ location /badminton/ {
 连接仓库，构建命令填 `npm run build`，输出目录填 `dist`。
 
 **GitHub Pages**
-推送到 `gh-pages` 分支，或在 Actions 里跑 build 后发布 `dist`。
+
+仓库已内置 `.github/workflows/deploy.yml`：推送到 `main` 分支后自动构建并发布。
+
+首次使用需在仓库 **Settings → Pages → Build and deployment → Source** 里选 **GitHub Actions**，之后每次 push 都会更新在线 Demo。
 
 ## 项目结构
 
