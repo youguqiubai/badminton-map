@@ -1,0 +1,23 @@
+{
+  "name": "badminton-map",
+  "private": false,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "全国羽毛球馆地图检索 - 基于高德地图 POI，支持定位与城市切换",
+  "license": "MIT",
+  "keywords": [
+    "badminton",
+    "amap",
+    "map",
+    "poi",
+    "vite"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>羽毛球馆地图 · 按定位查身边球场</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏸</text></svg>">
+</head>
+<body>
+<div id="map"></div>
+
+<aside id="panel">
+  <div class="sheet-bar" id="sheetBar">
+    <span class="sb-title"><span id="sbCity">羽毛球馆</span></span>
+    <span class="sb-sub"><span id="sbCount">加载中</span><span class="sb-arrow">&#9662;</span></span>
+  </div>
+
+  <div class="ph">
+    <h1><span class="dot"></span><span id="cityName">定位中</span>羽毛球馆</h1>
+    <p>共 <b id="totalN">0</b> 个场地 · 数据来源：高德地图 POI 实时检索</p>
+    <div class="stats">
+      <span class="s-pill court"><b id="courtN">0</b> 球场</span>
+      <span class="s-pill gym"><b id="gymN">0</b> 体育馆</span>
+      <span class="s-pill train"><b id="trainN">0</b> 培训</span>
+      <span class="s-pill"><b id="shownN">0</b> 显示</span>
+    </div>
+  </div>
+
+  <div class="citybar">
+    <button id="btnLocate" title="用 IP 定位当前城市">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/></svg>
+      定位
+    </button>
+    <input id="cityInput" type="text" placeholder="输入城市名，如 上海 / 成都" autocomplete="off">
+    <button id="btnCity">切换</button>
+    <button id="btnKey" title="配置高德 Key">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <div class="filters">
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input id="q" type="text" placeholder="搜索场馆、地址或区县…" autocomplete="off">
+    </div>
+    <div class="row2">
+      <select id="dist"><option value="">全部区县</option></select>
+      <div class="seg" id="typeSeg">
+        <button data-t="all" class="on">全部</button>
+        <button data-t="court">球场</button>
+        <button data-t="gym">体育馆</button>
+        <button data-t="train">培训</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="list" id="list"></div>
+</aside>
+
+<div id="legend">
+  <div class="t">图例</div>
+  <div class="lg"><i class="d" style="background:#0d9488;color:#0d9488"></i>羽毛球场</div>
+  <div class="lg"><i class="d" style="background:#2563eb;color:#2563eb"></i>综合体育馆</div>
+  <div class="lg"><i class="d" style="background:#d97706;color:#d97706"></i>培训机构</div>
+</div>
+
+<div id="keynotice"><b class="kt"></b><span class="kd"></span></div>
+
+<!-- Key 配置弹窗 -->
+<div id="keyModal" class="modal">
+  <div class="modal-box">
+    <h2>配置高德地图 Key</h2>
+    <p class="mdesc">
+      本工具不内置任何 Key，需要你用自己的。<br>
+      前往 <a href="https://console.amap.com/dev/key/app" target="_blank" rel="noopener">高德开放平台</a>
+      创建应用，添加 Key 时服务平台选 <b>Web端 (JS API)</b>。
+    </p>
+    <label class="fl">Key</label>
+    <input id="keyInput" type="text" placeholder="32 位十六进制字符串" autocomplete="off" spellcheck="false">
+    <label class="fl">安全密钥 securityJsCode<span class="opt">（2021 年 12 月后创建的 Key 必填）</span></label>
+    <input id="secInput" type="text" placeholder="选填，但新版 Key 不填会报 INVALID_USER_SCODE" autocomplete="off" spellcheck="false">
+    <div class="mbtns">
+      <button id="keyCancel" class="ghost">取消</button>
+      <button id="keySave" class="primary">保存并加载</button>
+    </div>
+    <p class="mnote">Key 只存在你浏览器的 localStorage，不会上传到任何服务器。</p>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
