@@ -19,7 +19,7 @@
 ## 快速开始
 
 ```bash
-git clone https://github.com/<your-name>/badminton-map.git
+git clone https://github.com/youguqiubai/badminton-map.git
 cd badminton-map
 npm install
 npm run dev
