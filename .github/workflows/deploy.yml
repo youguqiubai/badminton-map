@@ -29,6 +29,10 @@ jobs:
       - run: npm run build
 
       - uses: actions/configure-pages@v5
+        with:
+          # 仓库已存在 Pages 站点但 Source 是「Deploy from a branch」时，
+          # 该参数会把它切换成 GitHub Actions 构建方式
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
