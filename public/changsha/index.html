@@ -208,29 +208,27 @@ body.dark .navbtn{background:linear-gradient(178deg,#C05B4B,#9E3E31);box-shadow:
 
 .mapcard{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--card);
   margin-bottom:2px;box-shadow:var(--sh2)}
-#map{height:290px;width:100%;position:relative;background:var(--mapbg)}
-.mapnoset{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
-  align-items:center;text-align:center;padding:22px;gap:6px;background:var(--card2)}
-.mapnoset b{font-size:13.5px}
-.mapnoset span{font-size:11.5px;color:var(--ink3);line-height:1.7}
-.mapnoset .khelp{font-size:12px;color:var(--red);text-decoration:none;border-bottom:1px dashed #D8B9B3;
-  padding-bottom:1px}
-.mapnoset input{width:88%;max-width:320px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;
-  font-size:12.5px;font-family:inherit;background:var(--card);color:var(--ink)}
-.mapnoset button{margin-top:4px;border:1px solid var(--red);background:var(--red);color:#fff;
-  border-radius:8px;padding:7px 16px;font-size:13px;font-family:inherit;cursor:pointer}
-/* 没配 Key 时地图收成一行，别一进门就是一个填 Key 的表单 */
-.mapcard.off #map{height:auto;min-height:0}
-.mapcard.off .mapbar{display:none}
-.mapcard.off .mapnoset{position:static;inset:auto;flex-direction:row;align-items:center;
-  justify-content:flex-start;gap:10px;padding:12px 14px;text-align:left;background:var(--card2);cursor:pointer}
-.mapcard.off .mapnoset b{font-size:12.5px;font-weight:500;color:var(--ink2)}
-.mapcard.off .mapnoset span{display:none}
-.mapnoset .kmore{font-style:normal;font-size:11.5px;color:var(--red);margin-left:auto;white-space:nowrap}
+#map{height:250px;width:100%;position:relative;background:var(--mapbg);overflow:hidden}
+#mapimg{display:block;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+#mapimg.on{opacity:1}
+/* 高德静态图只有浅色一种，深色主题下压一压，别让一块白图夺走注意力 */
+body.dark #mapimg{filter:brightness(.86) contrast(1.06) saturate(.9)}
+.mapmsg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  text-align:center;padding:20px;font-size:12px;color:var(--ink3);line-height:1.8;background:var(--card2)}
+.mapmsg.on{display:flex}
+/* 默认收成一行：一进门先看到行程，而不是一张地图 */
+.mapopen{display:none;width:100%;align-items:center;gap:10px;padding:12px 14px;border:0;
+  background:var(--card2);color:var(--ink2);font-family:inherit;cursor:pointer;text-align:left}
+.mapopen b{font-size:12.5px;font-weight:500}
+.mapopen span{margin-left:auto;font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.mapcard.off .mapopen{display:flex}
+.mapcard.off #map,.mapcard.off .mapbar{display:none}
 .mapbar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-top:1px solid var(--line);background:var(--card3)}
 .mapbar span{font-size:11.5px;color:var(--ink3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mapbar button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:6px;
   padding:3px 9px;font-size:11.5px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.mapbar a.mapnav{color:var(--ink2);text-decoration:none;border:1px solid var(--line);background:var(--card);
+  border-radius:6px;padding:3px 9px;font-size:11.5px;white-space:nowrap}
 
 /* 地图气泡里的序号标记 */
 .mk{width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;font-weight:600;
@@ -432,12 +430,15 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
 
   <div class="wx" id="wx">正在取天气…</div>
 
-  <div class="mapcard">
-    <div id="map"><div class="mapnoset" id="mapnoset"></div></div>
+  <div class="mapcard off" id="mapcard">
+    <button class="mapopen" id="mapopen" type="button">
+      <b id="mapopenT">看今天这几个点在哪儿</b><span>点开 →</span>
+    </button>
+    <div id="map"><img id="mapimg" alt="这一天的行程点分布"><div class="mapmsg" id="mapmsg"></div></div>
     <div class="mapbar">
       <span id="mapinfo">地图</span>
       <button id="mapfit">看全程</button>
-      <button id="mapset">设置 Key</button>
+      <a class="mapnav" id="mapopenapp" target="_blank" rel="noopener">在高德里打开</a>
     </div>
   </div>
 
@@ -915,9 +916,6 @@ function applyTheme(){
   const btn = document.getElementById('themebtn');
   if(btn) btn.textContent = theme === 'auto' ? '外观 · 跟随系统' : (theme === 'dark' ? '外观 · 深色' : '外观 · 浅色');
   syncMeta();
-  if(MAP.map && MAP.map.setMapStyle){
-    try{ MAP.map.setMapStyle(dark ? 'amap://styles/dark' : 'amap://styles/normal'); }catch(e){}
-  }
 }
 
 function cycleTheme(){
@@ -1553,7 +1551,7 @@ function renderFeed(plan){
       if(ev.target.closest('button, a')) return;
       if(!lastPlan) return;
       const x = lastPlan.list.find(function(y){ return y.id === r.dataset.id; });
-      if(x && MAP.map) mapLocate(x);
+      if(x) mapLocate(x);
     };
   });
 
@@ -2021,241 +2019,210 @@ function autoLocate(){
   }, {enableHighAccuracy: true, timeout: 12000, maximumAge: 30000});
 }
 
-/* ---------- 高德地图 ---------- */
-const MAPK = 'cs_amap_v1';
-const MAP = {key:'', sec:'', map:null, markers:[], line:null, info:null, loading:false, err:'', ready:false};
+/* ---------- 地图：服务端出静态图 ----------
+   以前用高德 JS API，要每个访客自己填一个「Web端(JS API)」Key —— 因为瓦片是浏览器
+   直接渲染的，服务器上那把 Key 帮不上忙。现在改成让服务器调静态地图接口出图，
+   用的是同一把 Web 服务 Key，访客什么都不用配。
+   代价是没有拖动缩放、点标记弹详情，所以默认收成一行，真要看了再展开。 */
+const MAP = {seq: 0, open: false, center: null};
 let lastPlan = null;
 
-(function loadMapCfg(){
-  try{
-    const c = JSON.parse(localStorage.getItem(MAPK) || 'null');
-    if(c){ MAP.key = c.key || ''; MAP.sec = c.sec || ''; }
-  }catch(e){}
-}());
+const MAP_W = 750, MAP_H = 250;   // 静态图最多就这么大，再大高德会拒
 
-function saveMapCfg(key, sec){
-  MAP.key = key; MAP.sec = sec;
-  try{ localStorage.setItem(MAPK, JSON.stringify({key:key, sec:sec})); }catch(e){}
+function markColor(){
+  return cityOf(state.day) === 'jdz' ? '0x2E5B89' : '0xB33A2B';
 }
 
-function loadAmpLib(){
-  return new Promise(function(res, rej){
-    if(window.AMap) return res();
-    if(MAP.loading) return rej(new Error('正在加载…'));
-    MAP.loading = true;
-    if(MAP.sec) window._AMapSecurityConfig = {securityJsCode: MAP.sec};
-    const el = document.createElement('script');
-    el.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(MAP.key) + '&plugin=AMap.Scale';
-    el.onload = function(){ MAP.loading = false; res(); };
-    el.onerror = function(){ MAP.loading = false; rej(new Error('高德脚本没加载出来，检查网络')); };
-    document.head.appendChild(el);
-  });
+/* 把一组点装进 MAP_W × MAP_H 需要多大的缩放级别。
+   经度：一张瓦片 256px，2^z 张铺满 360 度。
+   纬度要走墨卡托，1px ≈ (360 / 256 / 2^z) × cos(纬度) 度 ——
+   所以 cos 是乘在分子上的，放分母会让算出来的级别高一级，边缘的点直接被裁到画外。
+   跨度再留 15% 的边，免得点正好压在图片边上 */
+function fitZoom(minLng, maxLng, minLat, maxLat, w){
+  const W = w || MAP_W;
+  const lngSpan = Math.max((maxLng - minLng) * 1.15, 0.004);
+  const latSpan = Math.max((maxLat - minLat) * 1.15, 0.004);
+  const mid = (minLat + maxLat) / 2 * Math.PI / 180;
+  const zx = Math.log(W * 360 / (256 * lngSpan)) / Math.LN2;
+  const zy = Math.log(MAP_H * 360 * Math.cos(mid) / (256 * latSpan)) / Math.LN2;
+  return Math.max(3, Math.min(17, Math.floor(Math.min(zx, zy))));
 }
 
-/* 地图要单独配一次 Key（JS API 的瓦片只能在浏览器里渲染，绕不开）。
-   但生成攻略已经走服务器代理了，不需要 Key —— 所以这里默认收成一行，
-   别让访客一进门就先撞上一个填 Key 的表单 */
-function renderMapSet(expand){
-  const box = document.getElementById('mapnoset');
-  if(!box) return;
-  const card = document.querySelector ? document.querySelector('.mapcard') : null;
-  if(card) card.classList.toggle('off', !expand);
-  box.style.display = 'flex';
-
-  if(!expand){
-    box.innerHTML = '<b>地图要单独配一次高德 Key</b><i class="kmore">可选，生成攻略不需要 · 点这里</i>';
-    box.onclick = function(){ renderMapSet(true); };
-    return;
-  }
-  box.onclick = null;
-  box.innerHTML = '<b>看地图前，先填一次高德 Key</b>'
-    + '<span>控制台 → 应用管理 → 我的应用 → 添加 Key，服务平台选「<b>Web端(JS API)</b>」<br>'
-    + '同一页面的「安全密钥 jscode」也要填，漏了地图会报 INVALID_USER_SCODE</span>'
-    + '<a class="khelp" href="https://console.amap.com/dev/key/app" target="_blank" rel="noopener">去高德控制台拿 Key →</a>'
-    + '<input id="mk1" placeholder="Web端(JS API) 的 Key" autocomplete="off" spellcheck="false">'
-    + '<input id="mk2" placeholder="安全密钥 jscode" autocomplete="off" spellcheck="false">'
-    + '<button id="mksave">保存并加载地图</button>'
-    + '<span>只存这台手机，页面源码里没有 Key</span>';
-
-  const k1 = document.getElementById('mk1');
-  k1.value = MAP.key || '';
-  document.getElementById('mk2').value = MAP.sec || '';
-  document.getElementById('mksave').onclick = function(){
-    const a = k1.value.trim(), b = document.getElementById('mk2').value.trim();
-    if(!a){ alert('Key 不能为空'); return; }
-    saveMapCfg(a, b);
-    MAP.err = ''; MAP.ready = false;
-    if(MAP.map){ MAP.map.destroy(); MAP.map = null; }
-    initMap();
-  };
+/* 地图容器的实际宽度。收起状态下是 0，所以调用前得先展开 */
+function mapW(){
+  const el = document.getElementById('map');
+  let w = 0;
+  try{ w = el ? Math.round(el.getBoundingClientRect().width) : 0; }catch(e){}
+  return Math.max(320, Math.min(1024, w || MAP_W));
 }
 
-async function initMap(){
-  if(!MAP.key){ renderMapSet(false); return; }
-  const box = document.getElementById('mapnoset');
-  if(box){ box.style.display = 'none'; }
-  const card = document.querySelector ? document.querySelector('.mapcard') : null;
-  if(card) card.classList.remove('off');
-
-  try{
-    await loadAmpLib();
-    if(!MAP.map){
-      const ci = cityInfo();
-      MAP.map = new AMap.Map('map', {
-        zoom: ci.zoom,
-        center: ci.center,
-        viewMode: '2D',
-        zooms: [9, 18],
-        resizeEnable: true,
-        showLabel: true
-      });
-      MAP.map.addControl(new AMap.Scale());
-      MAP.map.on('complete', function(){ MAP.ready = true; });
-    }
-    MAP.err = '';
-  }catch(e){
-    MAP.err = e.message;
-    if(box){
-      box.style.display = 'flex';
-      box.innerHTML = '<b>地图没起来</b><span>' + e.message + '</span>';
-    }
-  }
-  renderMap(lastPlan);
-}
-
-function markerHTML(x, idx){
-  let cls = '';
-  if(x.stat === 'done') cls = ' done';
-  else if(x.stat === 'skip') cls = ' skip';
-  else if(x.stat === 'dead') cls = ' dead';
-  if(x._here) cls += ' here';
-  return '<div class="mk' + cls + '">' + idx + '</div>';
-}
-
-// 地图上的路线要用和主题一致的颜色，切城的时候得跟着换
-function accentColor(){
-  return cityOf(state.day) === 'jdz'
-    ? (isDark() ? '#89AFD4' : '#2E5B89')
-    : (isDark() ? '#E07A6A' : '#B33A2B');
-}
-
-function openInfo(x){
-  if(!MAP.map) return;
-  const g = x._g || resolveGeo(x);
-  if(!g) return;
-  const m = (x.move && x.move > 0) ? 'bus' : 'walk';
-  const t = (x.start != null) ? x.start : parseT(x.t);
-  const html = '<div class="iw"><b>' + x.name + '</b>'
-    + '<div class="d">' + fmt(t) + ' · ' + ZONE_CN[x.zone] + ' · ' + x.dur + ' 分</div>'
-    + '<a href="' + navURL(x, m) + '" target="_blank" rel="noopener">导航过去</a>'
-    + '<a href="' + searchURL(x) + '" target="_blank" rel="noopener" style="background:#F2EEE7;color:#57524C;margin-left:6px">搜地图</a></div>';
-  if(!MAP.info) MAP.info = new AMap.InfoWindow({offset: new AMap.Pixel(0, -14)});
-  MAP.info.setContent(html);
-  MAP.info.open(MAP.map, [g.lng, g.lat]);
-}
-
-function renderMap(plan){
-  if(!plan || !MAP.map) return;
-  const list = plan.list;
+/* 当天的点。换城那天会混着两座城的点（长沙退房 → 高铁 → 景德镇），
+   全画上去视野会被拉到 400 公里，另一座城的点干脆不画 */
+function mapMarks(plan){
+  const out = [];
+  if(!plan) return out;
   const dayCity = cityOf(state.day);
-  const dc = CITY[dayCity].center;
-  MAP.map.clearMap();
-  MAP.info = null;
-  MAP.markers = [];
-
-  const path = [];
-  const pos = [];
-  const hereName = activeLocName();
-  let k = 0;
-  list.forEach(function(x){
-    // 换城那天会混着两座城的点（长沙退房 → 高铁 → 景德镇），
-    // 全画上去视野会被拉到 400 公里，另一座城的点只留在地图外面
+  (plan.list || []).forEach(function(x){
     if(ZONE_CITY[x.zone] !== dayCity) return;
+    if(x.stat === 'skip') return;
     const g = resolveGeo(x);
     if(!g) return;
     x._g = g;
-    x._here = !!(hereName && g.key === hereName);
-    k++;
-    const mk = new AMap.Marker({
-      position: [g.lng, g.lat],
-      content: markerHTML(x, k),
-      offset: new AMap.Pixel(-13, -13),
-      zIndex: x.stat === 'ok' ? 100 : 50
-    });
-    mk.on('click', function(){ openInfo(x); });
-    MAP.markers.push(mk);
-    pos.push([g.lng, g.lat]);
-    if(x.stat !== 'skip') path.push([g.lng, g.lat]);
+    out.push({ll: g, color: markColor(), size: 'large'});
   });
-
-  // 你当前站在哪，单独画一个。GPS 坐标可能还是上一座城的，离得远就不画
+  // 你现在站在哪，单独一个绿点。GPS 可能还是上一座城的，离得远就不画
+  const dc = CITY[dayCity].center;
   const gps = state.geo;
   const gpsOk = gps && distM(gps[0], gps[1], dc[0], dc[1]) < 60000;
   const home = (gpsOk ? gps : null) || GEO[activeLocName()];
   if(home){
-    const me = new AMap.Marker({
-      position: [home[0], home[1]],
-      content: '<div class="mk me">我</div>',
-      offset: new AMap.Pixel(-13, -13),
-      zIndex: 200
-    });
-    MAP.markers.push(me);
+    const me = {lng: home[0], lat: home[1]};
+    // 人已经在第一个点上了（比如 D1 就在五一商圈里转），再画个绿点只会把红点盖住
+    const onSpot = out.some(function(m){ return havKm(m.ll, me) < 0.15; });
+    // me:true 只是为了别把它算进「今天几个点」的数字里
+    if(!onSpot) out.push({ll: me, color: '0x2E7D4F', size: 'large', me: true});
   }
-
-  if(MAP.markers.length){
-    MAP.map.add(MAP.markers);
-    if(path.length > 1){
-      MAP.line = new AMap.Polyline({
-        path: path,
-        strokeColor: accentColor(),
-        strokeWeight: 3,
-        strokeOpacity: .7,
-        strokeStyle: 'dashed',
-        strokeDasharray: [8, 6],
-        lineJoin: 'round',
-        showDir: true
-      });
-      MAP.map.add(MAP.line);
-      MAP.map.setFitView(MAP.markers, false, [36, 26, 36, 26]);
-    } else {
-      MAP.map.setZoomAndCenter(15, pos[0]);
-    }
-  } else {
-    // 一天里一个点都落不下（比如坐标都没匹配上），至少把镜头挪到对的城市
-    MAP.map.setZoomAndCenter(CITY[dayCity].zoom, dc);
-  }
-
-  const info = document.getElementById('mapinfo');
-  if(info){
-    info.textContent = DAYS[state.day].date + ' · ' + CITY[dayCity].name + ' · ' + MAP.markers.length + ' 个点'
-      + (activeLocName() ? ' · 你在' + activeLocName() : '');
-  }
+  return out;
 }
 
+/* 多组标记用 | 分隔，组内是 size,color,label:lng,lat。
+   v3 这个接口实测不认标记上的数字和汉字，所以只靠颜色区分 */
+function mapURL(center, zoom, marks, w){
+  if(!GEN_API) return '';
+  const W = w || MAP_W;
+  const q = [
+    'location=' + center.lng.toFixed(6) + ',' + center.lat.toFixed(6),
+    'zoom=' + zoom,
+    'size=' + W + '*' + MAP_H,
+    'scale=2'
+  ];
+  if(marks && marks.length){
+    const LAB = '123456789ABCDEFG';
+    q.push('markers=' + marks.slice(0, 16).map(function(m, i){
+      /* 第三段是 label。它留空的话接口不报错，但坐标会被解析错位 —— 所有点
+         会被画到同一个地方去。所以必须塞一个合法值（1-9 或 A-Z），
+         哪怕 v3 根本不会把它显示出来 */
+      return m.size + ',' + m.color + ',' + (LAB.charAt(i) || '1')
+        + ':' + m.ll.lng.toFixed(6) + ',' + m.ll.lat.toFixed(6);
+    }).join('%7C'));
+  }
+  return GEN_API + 'static?' + q.join('&');
+}
+
+function mapLoad(url){
+  const img = document.getElementById('mapimg');
+  const msg = document.getElementById('mapmsg');
+  if(!img) return;
+  if(!url){
+    img.classList.remove('on');
+    if(msg){
+      msg.textContent = '这张地图要服务器支持。打开 http://121.43.173.154/changsha/ 就能看到';
+      msg.classList.add('on');
+    }
+    return;
+  }
+  const seq = ++MAP.seq;
+  const pre = new Image();
+  // 先预载，load 完再换 src，否则会闪一下上一张图
+  pre.onload = function(){
+    if(seq !== MAP.seq) return;
+    img.src = url;
+    img.classList.add('on');
+    if(msg) msg.classList.remove('on');
+  };
+  pre.onerror = function(){
+    if(seq !== MAP.seq) return;
+    img.classList.remove('on');
+    if(msg){
+      msg.textContent = '地图没出来，可能是高德的日配额用完了。点右下角「在高德里打开」一样能看';
+      msg.classList.add('on');
+    }
+  };
+  pre.src = url;
+}
+
+/* 换一张图，顺便把「在高德里打开」指到同一个位置 */
+function mapShow(center, zoom, marks){
+  MAP.center = center;
+  const a = document.getElementById('mapopenapp');
+  if(a){
+    a.href = 'https://uri.amap.com/marker?position=' + center.lng.toFixed(6) + ',' + center.lat.toFixed(6)
+      + '&name=' + encodeURIComponent(CITY[cityOf(state.day)].name)
+      + '&coordinate=gaode&callnative=0';
+  }
+  mapLoad(mapURL(center, zoom, marks, mapW()));
+}
+
+/* 把这一天的点全都框进来 */
+function mapFit(plan){
+  const marks = mapMarks(plan || lastPlan);
+  const dc = CITY[cityOf(state.day)];
+  if(!marks.length){
+    mapShow({lng: dc.center[0], lat: dc.center[1]}, dc.zoom || 12, []);
+    return;
+  }
+  if(marks.length === 1){
+    mapShow(marks[0].ll, 15, marks);
+    return;
+  }
+  let minLng = 999, maxLng = -999, minLat = 999, maxLat = -999;
+  marks.forEach(function(m){
+    minLng = Math.min(minLng, m.ll.lng); maxLng = Math.max(maxLng, m.ll.lng);
+    minLat = Math.min(minLat, m.ll.lat); maxLat = Math.max(maxLat, m.ll.lat);
+  });
+  mapShow({lng: (minLng + maxLng) / 2, lat: (minLat + maxLat) / 2},
+    fitZoom(minLng, maxLng, minLat, maxLat, mapW()), marks);
+}
+
+function mapExpand(){
+  MAP.open = true;
+  const card = document.getElementById('mapcard');
+  if(card) card.classList.remove('off');
+}
+
+function renderMap(plan){
+  lastPlan = plan || lastPlan;
+  if(!plan) return;
+  const dayCity = cityOf(state.day);
+  const n = mapMarks(plan).filter(function(m){ return !m.me; }).length;
+  const info = document.getElementById('mapinfo');
+  if(info){
+    info.textContent = DAYS[state.day].date + ' · ' + CITY[dayCity].name + ' · ' + n + ' 个点'
+      + (activeLocName() ? ' · 你在' + activeLocName() : '');
+  }
+  const t = document.getElementById('mapopenT');
+  if(t) t.textContent = DAYS[state.day].date + ' 这 ' + n + ' 个点在哪儿';
+  // 收起的时候只更新文字，图等点开再出，省一次请求
+  if(MAP.open) mapFit(plan);
+}
+
+/* 点某一行，把地图挪到那个点 */
 function mapLocate(x){
+  if(!x) return;
   const g = x._g || resolveGeo(x);
-  if(!MAP.map || !g) return;
-  MAP.map.setZoomAndCenter(16, [g.lng, g.lat]);
-  openInfo(x);
-  const card = document.querySelector('.mapcard');
+  if(!g) return;
+  x._g = g;
+  if(!MAP.open) mapExpand();
+  mapShow(g, 16, mapMarks(lastPlan));
+  const info = document.getElementById('mapinfo');
+  if(info){
+    info.textContent = x.name + ' · ' + fmt(x.start != null ? x.start : parseT(x.t)) + ' · ' + x.dur + ' 分';
+  }
+  const card = document.getElementById('mapcard');
   if(card){
     const y = card.getBoundingClientRect().top + window.pageYOffset - 118;
     window.scrollTo({top: Math.max(0, y), behavior: 'smooth'});
   }
 }
 
-function bindMapBar(){
+function bindMap(){
+  const open = document.getElementById('mapopen');
+  if(open) open.onclick = function(){
+    mapExpand();
+    if(lastPlan) mapFit(lastPlan);
+  };
   const fit = document.getElementById('mapfit');
-  if(fit) fit.onclick = function(){
-    if(!MAP.map) return;
-    if(MAP.markers.length) MAP.map.setFitView(MAP.markers, false, [36, 26, 36, 26]);
-  };
-  const setBtn = document.getElementById('mapset');
-  if(setBtn) setBtn.onclick = function(){
-    MAP.err = ''; MAP.ready = false;
-    if(MAP.map){ MAP.map.destroy(); MAP.map = null; }
-    renderMapSet();
-  };
+  if(fit) fit.onclick = function(){ if(lastPlan) mapFit(lastPlan); };
 }
 
 function wearTip(feel){
@@ -2980,7 +2947,7 @@ function renderAll(){
   renderClock();
   renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco);
   renderSummary(plan); renderDock(plan);
-  if(MAP.map) renderMap(plan);
+  renderMap(plan);
   document.getElementById('feedTitle').textContent =
     DAYS[state.day].date + ' · ' + CITY[cityOf(state.day)].name + ' 行程';
 }
@@ -3017,8 +2984,7 @@ if(!window.isSecureContext){
   gb.title = 'HTTP 下浏览器不给定位，改用 https 地址';
 }
 
-bindMapBar();
-initMap();  // 有 Key 才会真加载，没有就显示填写入口
+bindMap();  // 地图改成服务端出静态图，这里只绑「点开 / 看全程」，不主动请求
 genBind();  // 按地点生成：只绑定事件，不主动发请求
 loadWX();   // 异步取天气，回来自己会重渲染
 
