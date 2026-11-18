@@ -155,6 +155,18 @@ body:not(.booted) .wrap > *:nth-child(4){animation-delay:.12s}
 /* 硬提醒：预约、收摊时间这类「不知道就会白跑」的信息 */
 .row .note{font-size:11.5px;color:var(--ink2);margin-top:5px;padding:5px 9px;border-radius:var(--r-sm);
   background:var(--card3);border-left:2px solid var(--red);line-height:1.6}
+/* 吃哪家：店名 - 人均 - 招牌。不落到具体一家，等于没推荐 */
+.row .eat{margin-top:6px;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden}
+.row .eat .eh{font-size:10px;color:var(--ink3);letter-spacing:.12em;font-weight:600;
+  padding:3px 9px;background:var(--card3)}
+.row .eat .ei{display:flex;gap:7px;align-items:baseline;padding:5px 9px;font-size:11.5px;line-height:1.55}
+.row .eat .ei + .ei{border-top:1px solid var(--line2)}
+.row .eat .en{font-weight:600;color:var(--ink);flex:0 0 auto;letter-spacing:-.01em}
+.row .eat .ep{color:var(--ink3);flex:0 0 auto;font-weight:600;font-variant-numeric:tabular-nums}
+.row .eat .es{color:var(--ink2);min-width:0}
+/* 本地人劝退的店：划掉，别让人白排一小时 */
+.row .eat .ei.bad .en{color:var(--ink3);text-decoration:line-through}
+.row .eat .ei.bad .es{color:var(--ink3)}
 .tag{display:inline-block;font-size:10.5px;padding:1.5px 7px;border-radius:20px;margin-left:5px;
   background:var(--blue2);color:var(--blue);vertical-align:1.5px;font-weight:500;letter-spacing:.02em}
 .tag.g{background:var(--green2);color:var(--green)}
@@ -549,12 +561,37 @@ function cleanName(name){
 const DAYS = {
   D1:{ date:'11.19 周四', city:'cs', start:12*60, end:23*60, sunset:17*60+36, items:[
     {id:'d1a',t:'12:35',name:'酒店放行李',zone:'wu',dur:30,type:'杂',win:null},
-    {id:'d1b',t:'13:05',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:45,type:'吃',win:null},
+    {id:'d1b',t:'13:05',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:45,type:'吃',win:null,
+     note:'落地第一顿别搞仪式感，嗦碗粉就走。这里粉店密度极高，排队超过 10 分钟就换隔壁，差距没到值得等的地步',
+     eat:[
+       {n:'肆姐面粉馆',p:'20',s:'牛肉粉、肉饼蒸蛋粉、辣椒炒肉粉',w:'坡子街，黄兴广场站出来'},
+       {n:'公交新村粉店',p:'12',s:'雪里蕻牛肉粉、红烧猪脚粉',w:'曙光路，24 小时，什么点到都能吃'},
+       {n:'双燕楼',p:'12',s:'馄饨',w:'坡子街，1907 年的老字号，市级非遗'}
+     ]},
     {id:'d1c',t:'14:15',name:'橘子洲',zone:'hexi',dur:195,type:'逛',win:[420,1320],outdoor:1,duskOk:1,top:1,
      note:'落地第一站。地铁 2 号线橘子洲站直达，免费但要实名预约。洲子南北五公里，一定坐观光小火车，走到洲头正好赶上 17:36 的日落'},
-    {id:'d1d',t:'18:00',name:'费大厨 / 炊烟 · 晚餐',zone:'wu',dur:90,type:'吃',win:null,notBefore:1080},
-    {id:'d1e',t:'19:45',name:'太平街 → 坡子街',zone:'wu',dur:80,type:'逛',win:null},
-    {id:'d1f',t:'21:10',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null},
+    {id:'d1d',t:'18:00',name:'炊烟时代 · 小炒黄牛肉',zone:'wu',dur:90,type:'吃',win:null,notBefore:1080,
+     note:'第一顿正经湘菜。炊烟和黄兴广场的费大厨就隔几百米，哪家不用等就进哪家——两家招牌不重叠，一个黄牛肉一个辣椒炒肉，不用二选一。辣度要主动说「微辣」，不然默认是真的辣',
+     eat:[
+       {n:'炊烟时代',p:'60–100',s:'小炒黄牛肉（非遗，进过联合国）、剁椒鱼头',w:'黄兴广场店，离太平街 5 分钟'},
+       {n:'费大厨辣椒炒肉',p:'50–80',s:'辣椒炒肉（宁乡花猪+螺丝椒）、香芋蒸排骨',w:'国金中心店'},
+       {n:'壹盏灯',p:'60–100',s:'鸭掌筋、酸萝卜炒肚丝、酸辣鸡杂',w:'蚂蚁工房店，口味比前两家重'}
+     ]},
+    {id:'d1e',t:'19:45',name:'太平街 → 坡子街',zone:'wu',dur:80,type:'逛',win:null,
+     note:'一路吃过去就行，别在这儿吃正餐。火宫殿可以进去拍个照，吃饭另找',
+     eat:[
+       {n:'黑色经典',p:'10',s:'臭豆腐、大香肠',w:'太平街口，取餐最快的一家'},
+       {n:'天马牛肉饼',p:'8',s:'牛肉饼，现煎现卖',w:'太平街中段'},
+       {n:'胡记炸炸炸',p:'28',s:'里脊肉、包菜、藕片',w:'太平街，两人点一份拼着吃'},
+       {n:'火宫殿',p:'80',s:'除了猪血汤没什么值得点，贵且一般，只当路牌合影',w:'坡子街',bad:1}
+     ]},
+    {id:'d1f',t:'21:10',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null,
+     note:'晚上十点这条街还全是人。臭豆腐买小份，留点肚子走完',
+     eat:[
+       {n:'金记糖油坨坨',p:'5',s:'糖油粑粑，外脆里糯能拉丝',w:'步行街南端走到头，文庙平巷口，38 年老店'},
+       {n:'茶颜悦色',p:'18',s:'幽兰拿铁、声声乌龙',w:'这条街几十米一家，看哪队短进哪家'},
+       {n:'五娭毑臭豆腐',p:'10',s:'臭豆腐',w:'再往南到南门口，1979 年摆到现在'}
+     ]},
     {id:'d1g',t:'21:50',name:'恋爱天台',zone:'wu',dur:40,type:'拍',win:[600,1320],outdoor:1,nightOk:1}
   ]},
   D2:{ date:'11.20 周五', city:'cs', start:9*60, end:23*60, sunset:17*60+35, items:[
@@ -562,12 +599,27 @@ const DAYS = {
      note:'索道周末常限流停运，出门前查一眼；真停了就步行上山，四十分钟也到顶'},
     {id:'d2b',t:'11:20',name:'山顶 → 爱晚亭',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
     {id:'d2c',t:'12:40',name:'岳麓书院',zone:'hexi',dur:70,type:'逛',win:[480,1020]},
-    {id:'d2d',t:'13:55',name:'麓山南路 · 午餐',zone:'hexi',dur:60,type:'吃',win:null},
+    {id:'d2d',t:'13:55',name:'麓山南路 · 大学城扫街',zone:'hexi',dur:60,type:'吃',win:null,
+     note:'下山正好从这条街穿过去，边走边吃就是午饭了。花道寿司 16:30 才开门，中午去只能看别人排队，别惦记。避开 12:00 和 17:30 学生下课的钟点',
+     eat:[
+       {n:'老头子糖油粑粑',p:'5',s:'糖油粑粑 4 个，刚出锅烫手，趁热能拉丝',w:'麓山南路 158 号'},
+       {n:'天马牛肉饼',p:'10',s:'牛肉饼，二楼有现包麻薯（肉松海苔 ¥3）',w:'228 号，夏天还有冰镇杨梅'},
+       {n:'臭名远扬臭豆腐',p:'6',s:'金黄色的，泡菜萝卜蘸酱是灵魂',w:'364 号，队 20 分钟起'},
+       {n:'乌龙山铁板烧',p:'40',s:'掌中宝、肥肠、土豆，想坐下来吃就这家',w:'天马小区'},
+       {n:'十分满糖水铺',p:'10',s:'芋泥芋圆，十几种料随便加',w:'巷子里，永远在排队'}
+     ]},
     {id:'d2e',t:'15:05',name:'湖南大学 → 后湖',zone:'hexi',dur:60,type:'逛',win:null,outdoor:1},
     {id:'d2f',t:'16:10',name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',win:null},
     {id:'d2g',t:'17:00',name:'潮宗街',zone:'wu',dur:60,type:'逛',win:null,outdoor:1,duskOk:1},
-    {id:'d2h',t:'18:15',name:'晚餐 · 五一商圈',zone:'wu',dur:85,type:'吃',win:null,notBefore:1080},
-    {id:'d2i',t:'19:45',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140},
+    {id:'d2h',t:'18:15',name:'笨萝卜浏阳菜馆 · 晚餐',zone:'wu',dur:85,type:'吃',win:null,notBefore:1080,
+     note:'人均 40 的性价比天花板，也是这趟排队最值得的一家。门口队伍看着吓人，其实翻台快，十分钟能进；实在怕等就 17:30 前到',
+     eat:[
+       {n:'笨萝卜浏阳菜馆',p:'40',s:'小炒黄牛肉、金钱蛋、醋蒸鸡、酸菜粉皮',w:'太平街店，西牌楼街太平市集 2 楼'},
+       {n:'鲁哥饭店',p:'60',s:'咸蛋黄茄子、皮蛋肉泥、酸萝卜牛百叶',w:'黄兴北路 253 号'},
+       {n:'坛宗剁椒鱼头',p:'100–130',s:'剁椒鱼头，干冰上桌，两人点一份鱼头就够',w:'坡子街 123 号'}
+     ]},
+    {id:'d2i',t:'19:45',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140,
+     note:'进去逛场景、拍照就行，别在里面点菜——同款小龙虾比外面贵一半。真想吃虾，留给冬瓜山或渔人码头'},
     {id:'d2j',t:'21:00',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
   ]},
   D3:{ date:'11.21 周六', city:'jdz', start:6*60+10, end:22*60, sunset:17*60+14, items:[
@@ -579,22 +631,47 @@ const DAYS = {
      note:'10:26 到站，出站加打车差不多 10:55 上车、11:15 到陶溪川。打车 ¥25，或坐 901 路。房间没好就先寄存前台'},
     {id:'d3d',t:'11:20',name:'陶阳里 · 御窑厂',zone:'yyc',dur:165,type:'逛',win:[510,1290],top:1,
      note:'到景德镇的第一站。门票 ¥53、三天内可反复进出；御窑博物馆在景区里面，免费但要单独预约。中午红砖拱门光线硬，想出片就晚上再来一趟，夜景更好看'},
-    {id:'d3e',t:'14:25',name:'午餐 · 抚州弄 · 江西菜',zone:'yyc',dur:55,type:'吃',win:null,
-     note:'碱水粑、粉蒸肉、油条包麻糍；冷粉更适合当早饭'},
+    {id:'d3e',t:'14:25',name:'抚州弄 · 午餐（壹碗粉）',zone:'yyc',dur:55,type:'吃',win:null,
+     note:'这个点到，抚州弄的油条包麻糍和煎饼摊都已经收了（都是早市），剩下粉店和牛骨粉还开着。冷粉讲究「热吃」，烫好趁热拌，辣油才挂得住',
+     eat:[
+       {n:'壹碗粉',p:'8–30',s:'冷粉（粗粉配橘皮辣油）、饺子粑',w:'抚州弄中段，8:00–22:00'},
+       {n:'吴记牛骨粉',p:'15',s:'牛骨粉，一份里牛骨牛排都有，汤比隔壁樊记更稳',w:'抚州弄尾端，樊记就在隔壁'},
+       {n:'张记烧饼',p:'5',s:'梅干菜肉馅，薄皮现烤',w:'抚州弄口，当路上干粮'}
+     ]},
     {id:'d3f',t:'15:35',name:'雕塑瓷厂（园区免费）',zone:'txc',dur:70,type:'买',win:[540,1290],
      note:'园区和店铺都不收门票，平价瓷手串在这儿淘。里面那个乐天集市只在周六 9:00–12:00 开，这个点已经收了，不用惦记'},
     {id:'d3g',t:'16:55',name:'陶溪川文创街区',zone:'txc',dur:55,type:'逛',win:null,outdoor:1,duskOk:1,
      note:'旧瓷厂改的，22 栋老厂房和烟囱都原样留着；东北角的「窑与作」最适合拍照'},
-    {id:'d3h',t:'18:00',name:'晚餐 · 陶溪川附近',zone:'txc',dur:55,type:'吃',win:null,notBefore:1080},
+    {id:'d3h',t:'18:00',name:'回家吃饭 · 景德家常菜',zone:'txc',dur:55,type:'吃',win:null,notBefore:1080,
+     note:'吃完正好 19:00 走到市集，所以别挑远的店。这几家都是 16:30 才开晚市，18:00 进去刚好错开第一波，等位超过 20 分钟就换隔壁',
+     eat:[
+       {n:'回家吃饭',p:'62',s:'辣椒炒肉、手工饺子粑、瓷泥煨鸡',w:'陶溪川街区内 WY-103，离市集 200 米'},
+       {n:'小乐川',p:'71',s:'20 年赣菜，碱水粑、粉蒸肉',w:'陶溪川屋檐下 B1 栋 2 楼'},
+       {n:'图味美小黄鱼',p:'60–80',s:'小黄鱼、小炒黄牛肉、豆冲龙骨炖山珍',w:'陶溪川店，菜量适合两三人'},
+       {n:'六本猪脚皇',p:'60',s:'砂锅猪脚、牛肉炒冷粉、瑶里碱水粑',w:'雕塑瓷厂附近，白天在那边才顺路'}
+     ]},
     {id:'d3i',t:'19:07',name:'陶溪川市集',zone:'txc',dur:105,type:'逛',win:null,outdoor:1,nightOk:1,
      note:'市集只在周五、六、日 16:00 之后摆摊，周一至周四来了只有空厂房。白伞区是设计师孤品（¥200–800），只在周五周六晚上出，周日就撤了'},
     {id:'d3j',t:'21:04',name:'回酒店',zone:'txc',dur:20,type:'行',win:null}
   ]},
   D4:{ date:'11.22 周日', city:'jdz', start:8*60, end:21*60+45, sunset:17*60+13, items:[
-    {id:'d4a',t:'08:15',name:'早餐 · 冷粉 + 饺子粑',zone:'txc',dur:40,type:'吃',win:null},
+    {id:'d4a',t:'08:00',name:'抚州弄 · 早餐（冷粉 + 饺子粑）',zone:'yyc',dur:40,type:'吃',win:null,
+     note:'特意绕到抚州弄吃，因为酒店楼下没这口。粉店 8:00 才开门，别去早了；吃完打车 10 分钟进博物馆，9 点整赶上第一波人最少的时候',
+     eat:[
+       {n:'壹碗粉',p:'8–30',s:'冷粉、饺子粑（萝卜丝馅）',w:'抚州弄中段，老邮局对面'},
+       {n:'吴记牛骨粉',p:'15',s:'牛骨粉配一罐瓦罐汤',w:'抚州弄尾端，牛骨炖到脱骨'},
+       {n:'抚州弄口油条摊',p:'5',s:'油条包麻糍，现炸现裹，两人分一份',w:'街口第一家，仿品多，认招牌'},
+       {n:'季刻',p:'10',s:'浮梁红茶底奶茶，景德镇版茶颜',w:'吃完带一杯走'}
+     ]},
     {id:'d4b',t:'09:00',name:'中国陶瓷博物馆',zone:'yyc',dur:150,type:'逛',win:[540,990],book:1,
      note:'免费，但必须提前在「畅游景德镇」小程序实名预约（最多提前 5 天），周一闭馆。只认实体身份证，电子身份证和户口本都刷不进闸机'},
-    {id:'d4c',t:'12:30',name:'三宝村 · 午餐',zone:'sb',dur:60,type:'吃',win:null},
+    {id:'d4c',t:'12:30',name:'寻味三宝 · 村宴',zone:'sb',dur:60,type:'吃',win:null,
+     note:'下午要赶 17:27 的车，午餐别点需要现炖的。三宝这条谷有五六公里，吃完在村口租个电动车（约 ¥30/天）往里走，比走路省一小时',
+     eat:[
+       {n:'寻味三宝·村宴',p:'84',s:'三宝一锅河鲜、豆粑炖鱼头、青豆炒茄子',w:'三宝路，进村不远，本地人办席也选这'},
+       {n:'世外陶源餐厅',p:'60',s:'农家菜，就在陶艺村的院子里',w:'逛完瓷谷直接坐下，不用挪车'},
+       {n:'潜川面馆',p:'45',s:'日式汤面，15 分钟吃完',w:'赶时间就这家，院子很安静'}
+     ]},
     {id:'d4d',t:'13:40',name:'三宝国际瓷谷',zone:'sb',dur:70,type:'逛',win:null,outdoor:1,
      note:'村子免费，陶艺工作室和咖啡馆散在山谷里，没有固定路线，走到哪算哪'},
     {id:'d4e',t:'15:15',name:'回陶溪川取行李',zone:'txc',dur:50,type:'行',win:null},
@@ -638,14 +715,20 @@ const POOL = [
    why:'霓虹灯牌，天黑了才出效果，免费'},
   {name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',open:[600,1320],slots:['afternoon','dusk','night'],
    why:'地标合照，免费，晚上灯牌更好看'},
-  {name:'杨裕兴 · 嗦粉',zone:'wu',dur:40,type:'吃',open:[420,1260],slots:['morning','noon'],
-   why:'一碗肉丝粉，早上或中午最合适'},
-  {name:'火宫殿 · 小吃',zone:'wu',dur:60,type:'吃',open:[600,1260],slots:['noon','night'],
-   why:'坡子街一次吃全，等位看运气'},
+  {name:'双燕楼 · 馄饨',zone:'wu',dur:40,type:'吃',open:[420,1260],slots:['morning','noon'],
+   why:'1907 年的老字号，¥12 一碗，坡子街，比网红店稳得多'},
+  {name:'火宫殿 · 打卡',zone:'wu',dur:40,type:'拍',open:[600,1260],slots:['noon','night'],
+   why:'名头最大的那家，其实贵且一般——进去拍个门头、看眼戏台就够了，别坐下点菜'},
   {name:'南门口小吃街',zone:'tianxin',dur:60,type:'吃',open:[600,1380],slots:['night','latenight'],outdoor:1,
    why:'本地宵夜场，越晚越热闹'},
-  {name:'冬瓜山 · 口味虾',zone:'tianxin',dur:90,type:'吃',open:[1080,1440],slots:['latenight'],
-   why:'21 点后才上人的夜宵一条街'},
+  {name:'冬瓜山 · 夜宵一条街',zone:'tianxin',dur:90,type:'吃',open:[1080,1440],slots:['latenight'],
+   why:'21 点后才上人的夜宵街，比五一商圈便宜一半',
+   eat:[
+     {n:'冬瓜山肉肠',p:'10',s:'炸香肠，这条街因它而起',w:'巷口第一家'},
+     {n:'盟重烧烤',p:'60',s:'牛油、烈火牛肉',w:'巷子中段'},
+     {n:'丹丹热卤',p:'36',s:'热卤四合一、卤猪脚',w:'隔壁几家都是同类'},
+     {n:'天宝兄弟',p:'100–120',s:'口味虾、油爆虾',w:'真想吃虾就这家，别再往五一商圈走'}
+   ]},
 
   /* ── 景德镇 ──
      这座城的两个坑：市集只在周五六日下午四点后摆，博物馆周一闭馆还要提前预约。
@@ -653,7 +736,11 @@ const POOL = [
   {name:'陶阳新村夜市',zone:'yyc',dur:60,type:'吃',open:[1140,1380],slots:['night','latenight'],outdoor:1,
    why:'每晚 19 点后才出摊，十几块能淘一把小瓷件'},
   {name:'九集小镇',zone:'txc',dur:60,type:'吃',open:[1020,1380],slots:['night','latenight'],outdoor:1,
-   why:'陶溪川旁边的夜市，小吃比市集里便宜一半'},
+   why:'陶溪川旁边的夜市，小吃比市集里便宜一半',
+   eat:[
+     {n:'欧记大排档',p:'78',s:'三杯鸡、苦槠豆腐、炒碱水粑',w:'九集小镇店，开到凌晨 2 点'},
+     {n:'回家吃饭',p:'63',s:'辣椒炒肉、饺子粑',w:'陶阳新村店，就在九集小镇内'}
+   ]},
   {name:'古窑民俗博览区',zone:'bl',dur:120,type:'逛',open:[480,1020],slots:['morning','afternoon'],outdoor:1,
    why:'四朝古窑，老匠人现场拉坯，¥95，17:00 关门'},
   {name:'三宝蓬美术馆',zone:'sb',dur:60,type:'拍',open:[540,1020],slots:['afternoon'],
@@ -1257,6 +1344,14 @@ function renderFeed(plan){
     const warn = (x.blocked || x.late || wet)
       ? `<div class="warn">${x.blocked || x.late || wet}</div>` : '';
     const note = x.note ? `<div class="note">${x.note}</div>` : '';
+    const eat = (x.eat && x.eat.length)
+      ? '<div class="eat"><div class="eh">吃哪家</div>' + x.eat.map(function(e){
+          return '<div class="ei' + (e.bad ? ' bad' : '') + '">'
+            + '<span class="en">' + e.n + '</span>'
+            + (e.p ? '<span class="ep">¥' + e.p + '</span>' : '')
+            + '<span class="es">' + e.s + (e.w ? '　' + e.w : '') + '</span></div>';
+        }).join('') + '</div>'
+      : '';
     const move = (x.move && x.stat!=='done' && x.stat!=='skip' && x.stat!=='past') ? `<span>路程 ${x.move} 分</span>` : '';
     const mode = (x.move && x.move > 0) ? 'bus' : 'walk';
     const modeCN = mode === 'bus' ? '公交' : '步行';
@@ -1276,6 +1371,7 @@ function renderFeed(plan){
         <h4>${x.name}${tags.join('')}</h4>
         <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur}${x.pad ? '+' + x.pad : ''} 分</span>${move}</div>
         ${note}
+        ${eat}
         ${warn}
         <div class="acts">
           <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
@@ -1432,7 +1528,7 @@ function swapItem(id, altName){
   if(!it.origName){   // 记一下原样，方便还原
     it.origName = it.name; it.origZone = it.zone; it.origDur = it.dur;
     it.origType = it.type; it.origWin = it.win; it.origOutdoor = it.outdoor;
-    it.origNightOk = it.nightOk;
+    it.origNightOk = it.nightOk; it.origEat = it.eat;
   }
   it.name = alt.name;
   it.zone = alt.zone;
@@ -1441,6 +1537,9 @@ function swapItem(id, altName){
   it.win = alt.open || null;
   it.outdoor = alt.outdoor || 0;
   delete it.nightOk;
+  // 换掉的项不能还挂着原来的「吃哪家」，否则会推荐到隔了两公里的店
+  if(alt.eat) it.eat = alt.eat; else delete it.eat;
+  if(alt.note) it.note = alt.note; else delete it.note;
   save(); renderAll();
 }
 
@@ -1461,8 +1560,10 @@ function revertItem(id){
   it.name = it.origName; it.zone = it.origZone; it.dur = it.origDur;
   it.type = it.origType; it.win = it.origWin; it.outdoor = it.origOutdoor;
   if(it.origNightOk) it.nightOk = it.origNightOk;
+  if(it.origEat) it.eat = it.origEat;
   delete it.origName; delete it.origZone; delete it.origDur;
   delete it.origType; delete it.origWin; delete it.origOutdoor; delete it.origNightOk;
+  delete it.origEat;
   save(); renderAll();
 }
 
@@ -1470,7 +1571,8 @@ function addToDay(p){
   const day = DAYS[state.day];
   const id = 'x' + Date.now();
   day.items.push({id:id, t:fmt(nowMin()), name:p.name, zone:p.zone, dur:p.dur,
-    type:p.type, win:(p.open || p.win || null), outdoor:p.outdoor});
+    type:p.type, win:(p.open || p.win || null), outdoor:p.outdoor,
+    note:p.note, eat:p.eat});
   save(); renderAll();
 }
 
