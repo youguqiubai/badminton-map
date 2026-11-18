@@ -64,6 +64,10 @@ body.dark .bar{background:linear-gradient(152deg,#8E3A2D 0%,#7A2E23 45%,#5E2119 
 body[data-city="jdz"]{--red:#2E5B89;--red-d:#224569;--red2:#E9F0F7;--here:#1F4E79}
 body[data-city="jdz"] .bar{background:linear-gradient(152deg,#3D6E9F 0%,#2E5583 45%,#213F5C 100%);
   box-shadow:0 1px 0 rgba(255,255,255,.10) inset, 0 8px 28px -14px rgba(22,48,78,.65)}
+body[data-city="jdz"] .navbtn{background:linear-gradient(178deg,#3768A0,#28517C);
+  box-shadow:0 1px 3px rgba(26,56,92,.30)}
+body.dark[data-city="jdz"] .navbtn{background:linear-gradient(178deg,#3E6FA8,#2A4A70);
+  box-shadow:0 1px 2px rgba(0,0,0,.4)}
 body[data-city="jdz"] .dk-nav{background:linear-gradient(178deg,#3F6EA4,#2C4C76);
   box-shadow:0 2px 8px rgba(26,56,92,.30)}
 body.dark[data-city="jdz"]{--red:#89AFD4;--red-d:#A6C4E2;--red2:#1D2A38}
@@ -676,13 +680,20 @@ function sysDark(){
 }
 function isDark(){ return theme === 'dark' || (theme === 'auto' && sysDark()); }
 
+// 手机浏览器地址栏的颜色，跟顶栏保持一致（换城时也要跟着换）
+function syncMeta(){
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(!meta) return;
+  meta.setAttribute('content', isDark() ? '#141312'
+    : (cityOf(state.day) === 'jdz' ? '#2E5583' : '#B33A2B'));
+}
+
 function applyTheme(){
   const dark = isDark();
   document.body.classList.toggle('dark', dark);
   const btn = document.getElementById('themebtn');
   if(btn) btn.textContent = theme === 'auto' ? '外观 · 跟随系统' : (theme === 'dark' ? '外观 · 深色' : '外观 · 浅色');
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.setAttribute('content', dark ? '#141312' : '#B33A2B');
+  syncMeta();
   if(MAP.map && MAP.map.setMapStyle){
     try{ MAP.map.setMapStyle(dark ? 'amap://styles/dark' : 'amap://styles/normal'); }catch(e){}
   }
@@ -2046,6 +2057,7 @@ function renderAll(){
   lastPlan = plan;
   // 整站的强调色跟着城市走：长沙朱砂，景德镇青花
   document.body.dataset.city = cityOf(state.day);
+  syncMeta();
   renderClock();
   renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco);
   renderSummary(plan); renderDock(plan);
