@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#B33A2B">
-<title>长沙行程 · 实时调整</title>
+<title>长沙 · 景德镇 四天行程 · 实时调整</title>
 <style>
 :root{
   /* 底与面 */
@@ -59,6 +59,18 @@ body.dark{background-image:radial-gradient(900px 340px at 50% -140px, rgba(90,60
   box-shadow:0 1px 0 rgba(255,255,255,.10) inset, 0 8px 28px -14px rgba(110,35,25,.65)}
 body.dark .bar{background:linear-gradient(152deg,#8E3A2D 0%,#7A2E23 45%,#5E2119 100%);
   box-shadow:0 1px 0 rgba(255,255,255,.07) inset, 0 8px 28px -14px rgba(0,0,0,.7)}
+
+/* 换城：景德镇整站切成青花蓝，翻到 D3/D4 一眼就知道不在一座城了 */
+body[data-city="jdz"]{--red:#2E5B89;--red-d:#224569;--red2:#E9F0F7;--here:#1F4E79}
+body[data-city="jdz"] .bar{background:linear-gradient(152deg,#3D6E9F 0%,#2E5583 45%,#213F5C 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.10) inset, 0 8px 28px -14px rgba(22,48,78,.65)}
+body[data-city="jdz"] .dk-nav{background:linear-gradient(178deg,#3F6EA4,#2C4C76);
+  box-shadow:0 2px 8px rgba(26,56,92,.30)}
+body.dark[data-city="jdz"]{--red:#89AFD4;--red-d:#A6C4E2;--red2:#1D2A38}
+body.dark[data-city="jdz"] .bar{background:linear-gradient(152deg,#2C4E75 0%,#25405F 45%,#182B41 100%);
+  box-shadow:0 1px 0 rgba(255,255,255,.07) inset, 0 8px 28px -14px rgba(0,0,0,.7)}
+body.dark[data-city="jdz"] .dk-nav{background:linear-gradient(178deg,#3A6595,#28466C)}
+
 .bar-row{display:flex;align-items:baseline;gap:12px}
 .clock{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;
   text-shadow:0 1px 3px rgba(0,0,0,.16);line-height:1.15}
@@ -136,6 +148,9 @@ body:not(.booted) .wrap > *:nth-child(4){animation-delay:.12s}
 .row h4{font-size:14.5px;font-weight:600;line-height:1.45;letter-spacing:-.005em}
 .row .meta{font-size:11.5px;color:var(--ink3);margin-top:4px;letter-spacing:.01em}
 .row .meta span{margin-right:8px}
+/* 硬提醒：预约、收摊时间这类「不知道就会白跑」的信息 */
+.row .note{font-size:11.5px;color:var(--ink2);margin-top:5px;padding:5px 9px;border-radius:var(--r-sm);
+  background:var(--card3);border-left:2px solid var(--red);line-height:1.6}
 .tag{display:inline-block;font-size:10.5px;padding:1.5px 7px;border-radius:20px;margin-left:5px;
   background:var(--blue2);color:var(--blue);vertical-align:1.5px;font-weight:500;letter-spacing:.02em}
 .tag.g{background:var(--green2);color:var(--green)}
@@ -333,10 +348,11 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
   <button class="reset share" id="share">把当前进度发给另一个人</button>
   <button class="reset theme" id="themebtn">外观 · 跟随系统</button>
   <button class="reset" id="reset">重置今天的操作</button>
-  <footer>推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵。<br>
+  <footer>前两天在长沙，后两天去景德镇，页面整体配色会跟着换：朱砂是长沙，青花是景德镇。<br>
+  推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵；换城之后推荐池也跟着换，不会拿长沙的夜宵来填景德镇的空档。<br>
   点顶部大时间可以切到「某一刻」演练，提前看那个点该去哪。点「到了」记为已完成，点「跳过」移除，后面的时间和推荐立刻重算。<br>
   雨天会自动把户外项标出来，并给一个就近的室内替代（可还原）。<br>
-  天气来自 wttr.in，免费只给 3 天，出发后每天打开就能看到当天。<br>
+  天气来自 wttr.in，长沙和景德镇分别拉，都只给 3 天，出发后每天打开就能看到当天。景德镇那几个点的坐标是片区内估算，画到地图上时用高德再校准一次。<br>
   地图的高德 Key 只存在这台手机的浏览器里，页面源码中没有；点行程行可以让地图定位到那个点。数据只存在本机。</footer>
 </div>
 
@@ -351,19 +367,68 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
 
 <script>
 /* ---------- 数据 ---------- */
-const ZONE_CN = {wu:'五一商圈',hexi:'河西岳麓',yanghu:'洋湖',kaifu:'开福',tianxin:'天心',meixi:'梅溪湖'};
 
-// 片区之间通行分钟数
+/* 两座城。行程前两日在长沙、后两日在景德镇，所有跟城市有关的默认值都从这里取，
+   不要再往代码里散写「长沙」两个字 */
+const CITY = {
+  cs:  { name:'长沙',   wttr:'Changsha',   preset:'长沙',   center:[112.9775,28.1957], zoom:12 },
+  jdz: { name:'景德镇', wttr:'Jingdezhen', preset:'景德镇', center:[117.2210,29.2900], zoom:12 }
+};
+
+const ZONE_CN = {
+  wu:'五一商圈', hexi:'河西岳麓', yanghu:'洋湖', kaifu:'开福', tianxin:'天心', meixi:'梅溪湖',
+  // 景德镇
+  txc:'陶溪川', yyc:'御窑厂', sb:'三宝', bl:'浮梁', zhan:'景德镇北'
+};
+
+// 片区 → 所属城市。片区 id 全局唯一，靠这张表反查城市
+const ZONE_CITY = {
+  wu:'cs', hexi:'cs', yanghu:'cs', kaifu:'cs', tianxin:'cs', meixi:'cs',
+  txc:'jdz', yyc:'jdz', sb:'jdz', bl:'jdz', zhan:'jdz'
+};
+
+// 当天属于哪座城
+function cityOf(dk){
+  const d = DAYS[dk || state.day];
+  return (d && d.city) || 'cs';
+}
+function cityInfo(dk){ return CITY[cityOf(dk)] || CITY.cs; }
+
+/* 「我在」这个位置是全局的，但切到另一座城的日程时它就失效了
+   —— 不能拿长沙的酒店去算景德镇的路程。这里只做读取上的纠正，不去改用户选的值，
+   切回长沙那两天还是他自己选的那个点。 */
+function activeLoc(){
+  const c = cityOf(state.day);
+  if(ZONE_CITY[state.loc] === c) return state.loc;
+  const f = SPOTS.find(function(s){ return ZONE_CITY[s[1]] === c; });
+  return f ? f[1] : state.loc;
+}
+function activeLocName(){
+  const c = cityOf(state.day);
+  if(state.locName && ZONE_CITY[state.loc] === c) return state.locName;
+  const f = SPOTS.find(function(s){ return ZONE_CITY[s[1]] === c; });
+  return f ? f[0] : state.locName;
+}
+
+// 片区之间通行分钟数（同一张表塞两座城，跨城组合故意留空 —— 跨城不是「通行」而是坐火车）
 const TRAVEL = {
   wu:{wu:8,hexi:25,yanghu:35,kaifu:20,tianxin:10,meixi:30},
   hexi:{wu:25,hexi:8,yanghu:25,kaifu:40,tianxin:30,meixi:20},
   yanghu:{wu:35,hexi:25,yanghu:8,kaifu:45,tianxin:25,meixi:25},
   kaifu:{wu:20,hexi:40,yanghu:45,kaifu:8,tianxin:25,meixi:40},
   tianxin:{wu:10,hexi:30,yanghu:25,kaifu:25,tianxin:8,meixi:35},
-  meixi:{wu:30,hexi:20,yanghu:25,kaifu:40,tianxin:35,meixi:8}
+  meixi:{wu:30,hexi:20,yanghu:25,kaifu:40,tianxin:35,meixi:8},
+  // 景德镇市区小，打车基本都是十几分钟；陶溪川到雕塑瓷厂步行 15 分
+  txc:{txc:12,yyc:12,sb:15,bl:30,zhan:25},
+  yyc:{txc:12,yyc:10,sb:20,bl:30,zhan:25},
+  sb:{txc:15,yyc:20,sb:10,bl:35,zhan:30},
+  bl:{txc:30,yyc:30,sb:35,bl:12,zhan:25},
+  zhan:{txc:25,yyc:25,sb:30,bl:25,zhan:10}
 };
 
 // 所有地点：名称, 片区, 经度, 纬度（GCJ-02 高德坐标系）
+// 长沙的坐标是实测校准过的；景德镇这批是片区内估算，够用来判断「你在哪个片区」，
+// 画到地图上时会用高德 PlaceSearch 再校准一次（见 refineGeo），别拿它当米级精度
 const SPOTS = [
   ['五一广场','wu',112.9775,28.1957],
   ['太平街','wu',112.9700,28.1943],
@@ -394,13 +459,29 @@ const SPOTS = [
   ['简牍博物馆','tianxin',112.9830,28.1910],
   ['湖南第一师范','tianxin',112.9740,28.1830],
   ['梅溪湖艺术中心','meixi',112.8970,28.1900],
-  ['长沙南站','wu',113.0650,28.1500]
+  ['长沙南站','wu',113.0650,28.1500],
+  // ── 景德镇 ──
+  ['陶溪川文创街区','txc',117.2330,29.2900],
+  ['雕塑瓷厂','txc',117.2400,29.2875],
+  ['九集小镇','txc',117.2370,29.2855],
+  ['御窑厂·陶阳里','yyc',117.2065,29.2938],
+  ['龙珠阁','yyc',117.2040,29.2962],
+  ['抚州弄','yyc',117.2032,29.2908],
+  ['中国陶瓷博物馆','yyc',117.1820,29.2800],
+  ['陶阳新村','yyc',117.2090,29.2895],
+  ['三宝国际瓷谷','sb',117.2250,29.2510],
+  ['三宝蓬美术馆','sb',117.2215,29.2465],
+  ['古窑民俗博览区','bl',117.1975,29.2810],
+  ['瓷宫','bl',117.2410,29.3410],
+  ['景德镇北站','zhan',117.2270,29.3630]
 ];
 
 // 片区中心，用于没匹配到具体地点时兜底
 const ZONE_CENTER = {
   wu:[112.9775,28.1957], hexi:[112.9380,28.1870], yanghu:[112.9250,28.1290],
-  kaifu:[112.9940,28.2130], tianxin:[112.9800,28.1885], meixi:[112.8970,28.1900]
+  kaifu:[112.9940,28.2130], tianxin:[112.9800,28.1885], meixi:[112.8970,28.1900],
+  txc:[117.2330,29.2900], yyc:[117.2065,29.2938], sb:[117.2250,29.2510],
+  bl:[117.1975,29.2810], zhan:[117.2270,29.3630]
 };
 
 const GEO = {};
@@ -417,15 +498,33 @@ Object.assign(GEO, {
   '买伴手礼':[112.9775,28.1935], '步行街':[112.9775,28.1935],
   '长沙南':[113.0650,28.1500], '酒店':[112.9775,28.1957],
   '长沙之眼':[112.9330,28.1830], '游轮':[112.9670,28.1900],
-  '湘江游':[112.9670,28.1900]
+  '湘江游':[112.9670,28.1900],
+  // ── 景德镇的口语写法 ──
+  '景德镇北':[117.2270,29.3630],
+  '乐天集市':[117.2400,29.2875], '创意集市':[117.2400,29.2875],
+  '御窑博物馆':[117.2065,29.2938], '陶阳里':[117.2065,29.2938],
+  '陶溪川市集':[117.2330,29.2900], '陶溪川':[117.2330,29.2900],
+  '三宝村':[117.2250,29.2510], '三宝蓬':[117.2215,29.2465],
+  '回陶溪川':[117.2330,29.2900], '回酒店':[117.2330,29.2900],
+  '冷粉':[117.2032,29.2908], '碱水粑':[117.2032,29.2908]
 });
+
+/* 长沙的坐标是踩过点的，景德镇这批是按街区和门牌号推的，误差可能几百米。
+   地图上画个大概位置无所谓，但导航不能照着错坐标走 —— 标了 approx 的点
+   一律改成「按名称搜」，让高德自己去找正确的位置。 */
+const APPROX_GEO = new Set();
+SPOTS.forEach(function(s){ if(ZONE_CITY[s[1]] === 'jdz') APPROX_GEO.add(s[0]); });
+['景德镇北','乐天集市','创意集市','御窑博物馆','陶阳里','陶溪川市集','陶溪川',
+ '三宝村','三宝蓬','回陶溪川','回酒店','冷粉','碱水粑'].forEach(function(k){ APPROX_GEO.add(k); });
 
 // 按名称里出现的最长地名词匹配，避免「广场」这类短词误命中
 const GEO_KEYS = Object.keys(GEO).sort((a,b) => b.length - a.length);
 
 function findGeo(name){
   for(const k of GEO_KEYS){
-    if(name.indexOf(k) >= 0) return { key:k, lng:GEO[k][0], lat:GEO[k][1] };
+    if(name.indexOf(k) >= 0){
+      return { key:k, lng:GEO[k][0], lat:GEO[k][1], approx: APPROX_GEO.has(k) || undefined };
+    }
   }
   return null;
 }
@@ -437,9 +536,12 @@ function cleanName(name){
 }
 
 
-/* 每日行程：id, 时间, 名称, 片区, 时长(分), 类型, 开放窗[起,止] 或 null, 户外 */
+/* 每日行程：id, 时间, 名称, 片区, 时长(分), 类型, 开放窗[起,止] 或 null, 户外
+   city：这一天的城市（cs 长沙 / jdz 景德镇），天气、地图、导航、推荐池都跟着它走
+   note：硬提醒，写「不知道就会白跑一趟」的事（预约、收摊、只认实体证件）
+   nomove：这段路本身就写在 dur 里，别再额外加片区通行时间 */
 const DAYS = {
-  D1:{ date:'11.19 周四', start:12*60, end:23*60, sunset:17*60+36, items:[
+  D1:{ date:'11.19 周四', city:'cs', start:12*60, end:23*60, sunset:17*60+36, items:[
     {id:'d1a',t:'12:35',name:'酒店放行李',zone:'wu',dur:30,type:'杂',win:null},
     {id:'d1b',t:'13:00',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:40,type:'吃',win:null},
     {id:'d1c',t:'14:00',name:'太平街 → 坡子街',zone:'wu',dur:90,type:'逛',win:null},
@@ -449,7 +551,7 @@ const DAYS = {
     {id:'d1g',t:'19:50',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null},
     {id:'d1h',t:'20:50',name:'恋爱天台',zone:'wu',dur:40,type:'拍',win:[600,1320],outdoor:1,nightOk:1}
   ]},
-  D2:{ date:'11.20 周五', start:9*60, end:23*60, sunset:17*60+35, items:[
+  D2:{ date:'11.20 周五', city:'cs', start:9*60, end:23*60, sunset:17*60+35, items:[
     {id:'d2a',t:'09:00',name:'橘子洲',zone:'hexi',dur:150,type:'逛',win:null,outdoor:1},
     {id:'d2b',t:'11:50',name:'回市区午餐',zone:'wu',dur:60,type:'吃',win:null},
     {id:'d2c',t:'14:00',name:'岳麓山索道上山',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
@@ -459,19 +561,37 @@ const DAYS = {
     {id:'d2g',t:'19:40',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140},
     {id:'d2h',t:'21:30',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
   ]},
-  D3:{ date:'11.21 周六', start:9*60, end:23*60, sunset:17*60+35, items:[
-    {id:'d3a',t:'09:00',name:'湖南省博物馆',zone:'kaifu',dur:180,type:'逛',win:[540,960],book:1},
-    {id:'d3b',t:'12:20',name:'回五一广场 · 午餐',zone:'wu',dur:60,type:'吃',win:null},
-    {id:'d3c',t:'14:00',name:'谢子龙影像馆',zone:'yanghu',dur:90,type:'拍',win:[600,1080]},
-    {id:'d3d',t:'15:40',name:'李自健美术馆',zone:'yanghu',dur:60,type:'逛',win:[570,1050]},
-    {id:'d3e',t:'17:00',name:'洋湖湿地看日落',zone:'yanghu',dur:50,type:'拍',win:null,outdoor:1,duskOk:1},
-    {id:'d3f',t:'19:30',name:'冬瓜山夜宵',zone:'tianxin',dur:90,type:'吃',win:null,notBefore:1110}
+  D3:{ date:'11.21 周六', city:'jdz', start:6*60+10, end:22*60, sunset:17*60+14, items:[
+    {id:'d3a',t:'06:20',name:'退房 → 打车去长沙南',zone:'wu',dur:45,type:'行',win:null,
+     note:'地铁 2 号线 6:30 才发首班，赶 7:23 的车来不及，只能打车（约 25 分钟 ¥45）'},
+    {id:'d3b',t:'07:23',name:'G2760 长沙南 → 景德镇北',zone:'wu',dur:183,type:'行',win:null,notBefore:443,
+     note:'10:26 到，二等座约 ¥250。长沙南直达景德镇北一天只有 07:23 / 14:08 / 17:28 三班，后两班到那儿天就黑了'},
+    {id:'d3c',t:'10:40',name:'打车去陶溪川 · 放行李',zone:'txc',dur:50,type:'行',win:null,nomove:1,
+     note:'10:26 到站，出站加打车差不多 10:55 上车、11:15 到陶溪川。打车 ¥25，或坐 901 路。房间没好就先寄存前台'},
+    {id:'d3d',t:'11:25',name:'雕塑瓷厂 · 乐天集市',zone:'txc',dur:45,type:'逛',win:[540,720],
+     note:'园区本身免费，逛店铺不用买票；里面的乐天集市只在周六 9:00–12:00 开，门票 ¥50。你到这个点只剩半小时，觉得不值就只逛园区'},
+    {id:'d3e',t:'12:25',name:'午餐 · 江西菜',zone:'txc',dur:55,type:'吃',win:null,
+     note:'碱水粑、粉蒸肉、油条包麻糍；冷粉更适合当早饭'},
+    {id:'d3f',t:'13:40',name:'陶阳里 + 御窑博物馆',zone:'yyc',dur:150,type:'逛',win:[510,1290],
+     note:'陶阳里门票 ¥53，三天内可反复进出；御窑博物馆在景区里面，免费但要在小程序单独预约。红砖拱门 15:00–17:00 光线最软，正午拍出来全是死白'},
+    {id:'d3g',t:'16:50',name:'龙珠阁 + 抚州弄小吃',zone:'yyc',dur:60,type:'逛',win:null,outdoor:1,duskOk:1},
+    {id:'d3h',t:'18:10',name:'晚餐 · 陶溪川附近',zone:'txc',dur:55,type:'吃',win:null,notBefore:1080},
+    {id:'d3i',t:'19:30',name:'陶溪川市集',zone:'txc',dur:105,type:'逛',win:null,outdoor:1,nightOk:1,
+     note:'市集只在周五、六、日 16:00 之后摆摊，周一至周四来了只有空厂房。白伞区是设计师孤品（¥200–800），只在周五周六晚上出，周日就撤了'},
+    {id:'d3j',t:'21:15',name:'回酒店',zone:'txc',dur:20,type:'行',win:null}
   ]},
-  D4:{ date:'11.22 周日', start:9*60, end:13*60+30, sunset:17*60+33, items:[
-    {id:'d4a',t:'09:00',name:'白沙井 或 天心阁',zone:'tianxin',dur:60,type:'逛',win:null},
-    {id:'d4b',t:'10:20',name:'买伴手礼',zone:'wu',dur:60,type:'买',win:null},
-    {id:'d4c',t:'11:30',name:'坛宗剁椒鱼头 · 午餐',zone:'wu',dur:80,type:'吃',win:null,notBefore:660},
-    {id:'d4d',t:'13:00',name:'地铁去长沙南',zone:'wu',dur:30,type:'行',win:null}
+  D4:{ date:'11.22 周日', city:'jdz', start:8*60, end:21*60+45, sunset:17*60+13, items:[
+    {id:'d4a',t:'08:15',name:'早餐 · 冷粉 + 饺子粑',zone:'txc',dur:40,type:'吃',win:null},
+    {id:'d4b',t:'09:00',name:'中国陶瓷博物馆',zone:'yyc',dur:150,type:'逛',win:[540,990],book:1,
+     note:'免费，但必须提前在「畅游景德镇」小程序实名预约（最多提前 5 天），周一闭馆。只认实体身份证，电子身份证和户口本都刷不进闸机'},
+    {id:'d4c',t:'12:30',name:'三宝村 · 午餐',zone:'sb',dur:60,type:'吃',win:null},
+    {id:'d4d',t:'13:40',name:'三宝国际瓷谷',zone:'sb',dur:70,type:'逛',win:null,outdoor:1,
+     note:'村子免费，陶艺工作室和咖啡馆散在山谷里，没有固定路线，走到哪算哪'},
+    {id:'d4e',t:'15:15',name:'回陶溪川取行李',zone:'txc',dur:50,type:'行',win:null},
+    {id:'d4f',t:'16:20',name:'打车去景德镇北站',zone:'zhan',dur:35,type:'行',win:null,nomove:1,
+     note:'北站在浮梁洪源，市区过去 25 分钟。17:27 的车，提前 40 分钟到站刚好'},
+    {id:'d4g',t:'17:27',name:'D172 景德镇北 → 杭州东',zone:'zhan',dur:251,type:'行',win:null,notBefore:1047,
+     note:'21:38 到杭州东，二等座约 ¥140。想早点到家就走黄山北中转：G4258 16:29 + G7312，19:19 就到，只多 ¥32，但只有 28 分钟换乘'}
   ]}
 };
 
@@ -515,8 +635,37 @@ const POOL = [
   {name:'南门口小吃街',zone:'tianxin',dur:60,type:'吃',open:[600,1380],slots:['night','latenight'],outdoor:1,
    why:'本地宵夜场，越晚越热闹'},
   {name:'冬瓜山 · 口味虾',zone:'tianxin',dur:90,type:'吃',open:[1080,1440],slots:['latenight'],
-   why:'21 点后才上人的夜宵一条街'}
+   why:'21 点后才上人的夜宵一条街'},
+
+  /* ── 景德镇 ──
+     这座城的两个坑：市集只在周五六日下午四点后摆，博物馆周一闭馆还要提前预约。
+     所以池子里既有「只有晚上能去」的，也有「塞满白天空档」的，别互相顶掉。 */
+  {name:'陶阳新村夜市',zone:'yyc',dur:60,type:'吃',open:[1140,1380],slots:['night','latenight'],outdoor:1,
+   why:'每晚 19 点后才出摊，十几块能淘一把小瓷件'},
+  {name:'九集小镇',zone:'txc',dur:60,type:'吃',open:[1020,1380],slots:['night','latenight'],outdoor:1,
+   why:'陶溪川旁边的夜市，小吃比市集里便宜一半'},
+  {name:'古窑民俗博览区',zone:'bl',dur:120,type:'逛',open:[480,1020],slots:['morning','afternoon'],outdoor:1,
+   why:'四朝古窑，老匠人现场拉坯，¥95，17:00 关门'},
+  {name:'三宝蓬美术馆',zone:'sb',dur:60,type:'拍',open:[540,1020],slots:['afternoon'],
+   why:'水泥建筑嵌在山谷里，人少，下午侧光最好'},
+  {name:'龙珠阁',zone:'yyc',dur:40,type:'拍',open:[480,1200],slots:['dusk','night'],outdoor:1,nightOk:1,
+   why:'御窑厂旁的仿明重檐阁楼，免费，天黑打灯好看'},
+  {name:'抚州弄小吃街',zone:'yyc',dur:50,type:'吃',open:[420,840],slots:['morning','noon'],outdoor:1,
+   why:'冷粉、饺子粑、油条包麻糍，早午最热闹'},
+  {name:'御窑博物馆',zone:'yyc',dur:60,type:'拍',open:[540,1320],slots:['afternoon','dusk'],
+   why:'朱锫的八个红砖拱顶，免费但要单独预约，且在陶阳里景区里'},
+  {name:'瓷宫',zone:'bl',dur:60,type:'拍',open:[480,1020],slots:['morning','afternoon'],outdoor:1,
+   why:'整栋嵌了几万件瓷片瓷瓶，¥25，往浮梁方向才顺路'},
+  {name:'景德镇老城博物馆',zone:'yyc',dur:45,type:'逛',open:[540,990],slots:['morning','afternoon'],
+   why:'免费预约，讲一千年怎么烧瓷，半小时看完'},
+  {name:'陶艺街',zone:'txc',dur:60,type:'买',open:[600,1380],slots:['night'],outdoor:1,
+   why:'整条街晚上摆开，砍价空间比市集大'},
+  {name:'雕塑瓷厂园区',zone:'txc',dur:60,type:'买',open:[540,1290],slots:['morning','afternoon'],
+   why:'园区免费，店铺 8:00–20:00，平价瓷手串在这儿淘'}
 ];
+
+// 池子里的点属于哪座城，直接按片区反查，不用每项手写一遍
+POOL.forEach(function(p){ if(!p.city) p.city = ZONE_CITY[p.zone] || 'cs'; });
 
 /* ---------- 外观 ---------- */
 const THEME_KEY = 'cs_theme_v1';
@@ -599,12 +748,13 @@ function slotFit(slots, ph){
 
 /* ---------- 天气（wttr.in，免 Key、CORS 开放，失败就静默降级） ---------- */
 const WX = {ok:false, at:0, err:'', days:{}};
-const WX_KEY = 'cs_wx_v1';
+const WX_KEY = 'cs_wx_v2';
 const WX_TTL = 30*60*1000;   // 半小时缓存，别把人家服务刷挂
 
+// 缓存键里带上城市：长沙 11-21 和景德镇 11-21 是两份完全不同的预报
 function dayKeyOf(dk){
   const md = {D1:'11-19', D2:'11-20', D3:'11-21', D4:'11-22'}[dk];
-  return new Date().getFullYear() + '-' + md;
+  return cityOf(dk) + '|' + new Date().getFullYear() + '-' + md;
 }
 
 function parseClock12(s){
@@ -669,20 +819,38 @@ async function loadWX(){
     }
   }catch(e){}
 
-  try{
+  // 两座城各拉一份。哪一份挂了只降级那两天，不连累另一座城
+  const need = {};
+  Object.keys(DAYS).forEach(function(dk){ need[cityOf(dk)] = 1; });
+
+  const days = {};
+  let okN = 0, firstErr = '';
+
+  await Promise.all(Object.keys(need).map(async function(ck){
     const ctl = new AbortController();
-    const timer = setTimeout(function(){ ctl.abort(); }, 6000);
-    const r = await fetch('https://wttr.in/Changsha?format=j1&lang=zh', {signal: ctl.signal});
-    clearTimeout(timer);
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const j = JSON.parse(await r.text());
-    WX.days = parseWttr(j);
-    WX.ok = true; WX.at = Date.now(); WX.err = '';
+    const timer = setTimeout(function(){ ctl.abort(); }, 7000);
+    try{
+      const r = await fetch('https://wttr.in/' + CITY[ck].wttr + '?format=j1&lang=zh', {signal: ctl.signal});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const one = parseWttr(JSON.parse(await r.text()));
+      Object.keys(one).forEach(function(dt){ days[ck + '|' + dt] = one[dt]; });
+      okN++;
+    }catch(e){
+      if(!firstErr){
+        firstErr = (e && e.name === 'AbortError') ? '接口超时' : ((e && e.message) || '取天气失败');
+      }
+    }finally{
+      clearTimeout(timer);
+    }
+  }));
+
+  if(okN){
+    WX.days = days; WX.ok = true; WX.at = Date.now(); WX.err = '';
     try{ localStorage.setItem(WX_KEY, JSON.stringify({at:WX.at, days:WX.days})); }catch(e){}
     applySunset();
-  }catch(e){
+  }else{
     WX.ok = false;
-    WX.err = '天气暂时取不到，先按晴好天气排';
+    WX.err = '天气暂时取不到，先按晴好天气排' + (firstErr ? '（' + firstErr + '）' : '');
   }
   renderAll();
 }
@@ -699,10 +867,13 @@ function applySunset(){
 function indoorAlt(it, atMin){
   if(!it.outdoor) return null;
   const used = new Set(DAYS[state.day].items.map(function(x){ return x.name; }));
+  const here = cityOf(state.day);
   const list = POOL.filter(function(p){
+    if(p.city !== here) return false;                             // 别拿另一座城的点来替
     if(p.outdoor) return false;
     if(used.has(p.name)) return false;
-    const tv = TRAVEL[it.zone][p.zone];
+    const row = TRAVEL[it.zone];
+    const tv = row ? row[p.zone] : null;
     if(tv == null || tv > 25) return false;                       // 下雨别跑远
     // 差 15 分钟内开门也算能去（走过去刚好开门）
     if(p.open && atMin != null && (atMin >= p.open[1] - 5 || atMin < p.open[0] - 15)) return false;
@@ -715,7 +886,8 @@ function indoorAlt(it, atMin){
     if(za !== zb) return za - zb;
     const oa = a.open ? a.open[1] : 1440, ob = b.open ? b.open[1] : 1440;
     if(oa !== ob) return ob - oa;
-    return (TRAVEL[it.zone][a.zone] || 0) - (TRAVEL[it.zone][b.zone] || 0);
+    const row = TRAVEL[it.zone] || {};
+    return (row[a.zone] || 0) - (row[b.zone] || 0);
   });
   return list[0];
 }
@@ -773,7 +945,12 @@ function replan(){
     : Math.max(day.start, floor, firstPending ? parseT(firstPending.t) : day.start);
 
   const out = [];
-  let prevZone = state.loc;
+  /* 出发点：用户选的「我在」如果不在当天这座城市，就退回到当天第一个点。
+     D3 这种跨城的日子要特别注意 —— 早上还在长沙退房，不能拿景德镇的酒店去算路程 */
+  let prevZone = activeLoc();
+  if(day.items.length && ZONE_CITY[prevZone] !== ZONE_CITY[day.items[0].zone]){
+    prevZone = day.items[0].zone;
+  }
 
   for(const it of day.items){
     if(state.done[it.id]){
@@ -790,7 +967,8 @@ function replan(){
       continue; // 已过点，不推进时间轴
     }
 
-    let move = TRAVEL[prevZone][it.zone];
+    // nomove：这段路本身就算在 dur 里了（坐高铁、打车去车站），别再叠一次片区通行时间
+    let move = it.nomove ? 0 : (TRAVEL[prevZone] ? TRAVEL[prevZone][it.zone] : undefined);
     if(move === undefined) move = 15;
     if(move <= 8) move = 0;
     cursor += move;
@@ -860,7 +1038,7 @@ function recommend(plan){
   const remainAll = Math.max(0, day.end - ref);
 
   // 当前所在片区：最后一个真实经过的点（跳过的、已过点的都不算）
-  let curZone = state.loc;
+  let curZone = activeLoc();
   for(let i = list.length-1; i >= 0; i--){
     const st = list[i].stat;
     if(st !== 'skip' && st !== 'past' && list[i].zone){ curZone = list[i].zone; break; }
@@ -880,7 +1058,10 @@ function recommend(plan){
   }
 
   const cands = [];
+  const here = cityOf(state.day);
   for(const p of POOL){
+    // 只推当天这座城的点：站在景德镇不能给你推长沙的夜宵，反过来也不行
+    if(p.city !== here) continue;
     if(used.has(p.name)) continue;
 
     const tvIn = TRAVEL[curZone][p.zone];
@@ -971,14 +1152,19 @@ function resolveGeo(item){
 function navURL(item, mode){
   const g = resolveGeo(item);
   const q = encodeURIComponent(cleanName(item.name));
-  if(!g) return 'https://uri.amap.com/search?keyword=' + q + '&city=' + encodeURIComponent('长沙') + '&callnative=1';
+  // 搜「长沙冷粉」和搜「景德镇冷粉」结果完全不一样，城市必须跟着当天走
+  const cn = cityInfo().preset;
+  // 坐标是估的就别硬导，退回「按名称搜」—— 高德自己认得这个地方
+  if(!g || g.approx){
+    return 'https://uri.amap.com/search?keyword=' + q + '&city=' + encodeURIComponent(cn) + '&callnative=1';
+  }
   return 'https://uri.amap.com/navigation?to=' + g.lng + ',' + g.lat + ',' + encodeURIComponent(g.key)
     + '&mode=' + (mode || 'walk') + '&coordinate=gaode&callnative=1&src=cs-live';
 }
 
 function searchURL(item){
   return 'https://uri.amap.com/search?keyword=' + encodeURIComponent(cleanName(item.name))
-    + '&city=' + encodeURIComponent('长沙') + '&callnative=1';
+    + '&city=' + encodeURIComponent(cityInfo().preset) + '&callnative=1';
 }
 
 /* ---------- 渲染 ---------- */
@@ -993,21 +1179,21 @@ function renderTabs(){
 }
 
 function renderLoc(){
-  if(!state.locName){
-    // 从分享链接导入时只有片区、没有具体地标，取该片区第一个点当默认
-    const first = SPOTS.find(function(sp){ return sp[1] === state.loc; }) || SPOTS[0];
-    state.locName = first[0];
-    state.loc = first[1];
-  }
+  // 下拉里只列当天这座城的地标，别让「长沙的橘子洲」出现在景德镇那天
+  const c = cityOf(state.day);
+  const pool = SPOTS.filter(function(s){ return ZONE_CITY[s[1]] === c; });
+  const cur = activeLocName();
+  if(!pool.length) return;
+
   const el = document.getElementById('loc');
-  el.innerHTML = SPOTS.map(([n,z]) =>
-    `<option value="${z}" ${state.locName===n?'selected':''}>${n}</option>`
-  ).join('');
-  const idx = SPOTS.findIndex(([n]) => n === state.locName);
-  el.selectedIndex = idx >= 0 ? idx : 0;
+  el.innerHTML = pool.map(function(s){
+    return `<option value="${s[0]}" ${cur===s[0]?'selected':''}>${s[0]}</option>`;
+  }).join('');
+  el.value = cur;
+
   el.onchange = () => {
-    const [n,z] = SPOTS[el.selectedIndex];
-    state.locName = n; state.loc = z;
+    const sp = pool.find(s => s[0] === el.value) || pool[0];
+    state.locName = sp[0]; state.loc = sp[1];
     state.geo = null;          // 手动选了就按手动来，别和 GPS 打架
     save(); renderAll();
   };
@@ -1051,6 +1237,7 @@ function renderFeed(plan){
 
     const warn = (x.blocked || x.late || wet)
       ? `<div class="warn">${x.blocked || x.late || wet}</div>` : '';
+    const note = x.note ? `<div class="note">${x.note}</div>` : '';
     const move = (x.move && x.stat!=='done' && x.stat!=='skip' && x.stat!=='past') ? `<span>路程 ${x.move} 分</span>` : '';
     const mode = (x.move && x.move > 0) ? 'bus' : 'walk';
     const modeCN = mode === 'bus' ? '公交' : '步行';
@@ -1069,6 +1256,7 @@ function renderFeed(plan){
       <div class="bod">
         <h4>${x.name}${tags.join('')}</h4>
         <div class="meta"><span>${ZONE_CN[x.zone]}</span><span>${x.dur}${x.pad ? '+' + x.pad : ''} 分</span>${move}</div>
+        ${note}
         ${warn}
         <div class="acts">
           <a class="navbtn" href="${navURL(x, mode)}" target="_blank" rel="noopener">导航 · ${modeCN}</a>
@@ -1316,8 +1504,13 @@ function renderSummary(plan){
   if(home) h += '<br>' + home;
   const load = loadRatio(plan);
   if(load > 0.82){
+    // 换城那两天一半时间在车上，说「砍掉一项」没用，得说清满在哪
+    const tr = list.reduce(function(s, x){ return s + (x.type === '行' ? x.dur : 0); }, 0);
+    const why = tr >= 180
+      ? '其中 <b>' + fmtDur(tr) + '</b> 是坐在车上，这种日子本来就没有缓冲，' + '晚点十分钟会一路往后压'
+      : '几乎没有缓冲，遇到排队就会一路往后压，可以砍掉一项';
     h += '<br><span style="color:#A9701B">这天排得偏满：活动和路程占了可用时间的 '
-      + Math.round(load*100) + '%，几乎没有缓冲。遇到排队就会一路往后压，可以砍掉一项。</span>';
+      + Math.round(load*100) + '%，' + why + '。</span>';
   }
   document.getElementById('summary').innerHTML = h;
 }
@@ -1334,12 +1527,18 @@ function loadRatio(plan){
   return span > 0 ? act / span : 0;
 }
 
-// 收工回程：长沙地铁 23:00 前后末班，过了点只能打车
+// 收工回程：长沙地铁 23:00 前后末班；景德镇没有地铁，公交收得早只能打车
 function returnTip(plan){
   const {list, cursor, day} = plan;
   const alive = list.filter(function(x){ return x.stat !== 'skip'; });
   const last = alive[alive.length - 1];
   if(!last || cursor < 22*60) return '';
+
+  if(cityOf(state.day) === 'jdz'){
+    return '<span style="color:#A9701B">收工 ' + fmt(cursor) + ' 在' + ZONE_CN[last.zone]
+      + '。景德镇没有地铁，晚上 22:00 后公交基本收班，打车回酒店 10–20 块，市区内 15 分钟内都能到。</span>';
+  }
+
   const back = (TRAVEL[last.zone] && TRAVEL[last.zone].wu) || 20;
   const leave = cursor + (last.move || 0) + back;
   if(leave > 22*60+45){
@@ -1353,8 +1552,8 @@ function returnTip(plan){
 function renderStat(plan){
   const {cursor, day, live} = plan;
   const remain = Math.max(0, day.end - (live ? nowMin() : cursor));
-  document.getElementById('stat').innerHTML =
-    DAYS[state.day].date + '<br>' + (live ? '到收工还有' : '计划剩余') + ' <b>' + fmtDur(remain) + '</b>';
+  document.getElementById('stat').innerHTML = day.date + ' · ' + CITY[cityOf(state.day)].name
+    + '<br>' + (live ? '到收工还有' : '计划剩余') + ' <b>' + fmtDur(remain) + '</b>';
 }
 
 function renderClock(){
@@ -1372,8 +1571,9 @@ Object.keys(DAYS).forEach(function(dk){
   DAYS[dk].items.forEach(function(it){ ALL_ITEMS.push({day:dk, id:it.id}); });
 });
 
-// 只有这几项需要预约，单独编码，别为 26 项各占一个字符
-const BOOK_IDS = ['d3a'];
+// 只有这几项需要预约，单独编码，别为三十多项各占一个字符
+const BOOK_IDS = ['d4b'];
+const STATE_VER = 'v2';   // 行程从四天长沙改成两城，项数变了，旧链接自然作废
 
 function encodeState(){
   let st = '', pd = '', bk = '';
@@ -1382,12 +1582,14 @@ function encodeState(){
     pd += (state.pad[o.id] ? Math.min(35, Math.round(state.pad[o.id]/15)) : 0).toString(36);
   });
   BOOK_IDS.forEach(function(id){ bk += state.book[id] ? '1' : '0'; });
-  return 'v1.' + state.day + '.' + state.loc + '.' + st + '.' + pd + '.' + bk;
+  return STATE_VER + '.' + state.day + '.' + state.loc + '.' + st + '.' + pd + '.' + bk;
 }
 
 function decodeState(str){
   const p = String(str || '').split('.');
-  if(p[0] !== 'v1' || p.length < 6) return null;
+  if(!/^v[12]$/.test(p[0]) || p.length < 6) return null;
+  // 项数对不上说明是上一版行程的链接，硬套会把「到了」打到错的项目上
+  if((p[3] || '').length !== ALL_ITEMS.length) return null;
   const day = DAYS[p[1]] ? p[1] : 'D1';
   const loc = ZONE_CN[p[2]] ? p[2] : 'wu';
   const st = p[3] || '', pd = p[4] || '', bk = p[5] || '';
@@ -1516,10 +1718,23 @@ function autoLocate(){
     const g = wgs2gcj(pos.coords.longitude, pos.coords.latitude);
     const acc = pos.coords.accuracy || 0;
     const hit = nearestSpot(g[0], g[1]);
-    if(!hit.spot){
-      toast('定位到了，但不在长沙范围（' + g[0].toFixed(4) + ',' + g[1].toFixed(4) + '）');
+    const hereCity = cityOf(state.day);
+
+    // 现在有长沙和景德镇两批点，得先确认「你在哪座城」再谈具体地标
+    if(!hit.spot || hit.d > 80000){
+      toast('定位到了（' + g[0].toFixed(4) + ',' + g[1].toFixed(4) + '），但离长沙和景德镇都超过 '
+        + Math.round((hit.spot ? hit.d : 0)/1000) + ' 公里，手动选个位置更靠谱');
       return;
     }
+    const hitCity = ZONE_CITY[hit.spot[1]];
+    if(hitCity !== hereCity){
+      // 人已经在另一座城了，但页面上还是原来那天的日程 —— 别把坐标硬塞进去
+      const firstDay = Object.keys(DAYS).find(function(k){ return cityOf(k) === hitCity; });
+      toast('你现在在' + CITY[hitCity].name + '，但 ' + state.day + ' 排的是' + CITY[hereCity].name
+        + '。切到 ' + firstDay + ' 再定位');
+      return;
+    }
+
     state.geo = [g[0], g[1]];
     state.geoAcc = acc;
     state.loc = hit.spot[1];              // 片区用于重排，这个不会错
@@ -1620,9 +1835,10 @@ async function initMap(){
   try{
     await loadAmpLib();
     if(!MAP.map){
+      const ci = cityInfo();
       MAP.map = new AMap.Map('map', {
-        zoom: 13,
-        center: [112.9775, 28.1957],
+        zoom: ci.zoom,
+        center: ci.center,
         viewMode: '2D',
         zooms: [9, 18],
         resizeEnable: true,
@@ -1651,6 +1867,13 @@ function markerHTML(x, idx){
   return '<div class="mk' + cls + '">' + idx + '</div>';
 }
 
+// 地图上的路线要用和主题一致的颜色，切城的时候得跟着换
+function accentColor(){
+  return cityOf(state.day) === 'jdz'
+    ? (isDark() ? '#89AFD4' : '#2E5B89')
+    : (isDark() ? '#E07A6A' : '#B33A2B');
+}
+
 function openInfo(x){
   if(!MAP.map) return;
   const g = x._g || resolveGeo(x);
@@ -1669,20 +1892,28 @@ function openInfo(x){
 function renderMap(plan){
   if(!plan || !MAP.map) return;
   const list = plan.list;
+  const dayCity = cityOf(state.day);
+  const dc = CITY[dayCity].center;
   MAP.map.clearMap();
   MAP.info = null;
   MAP.markers = [];
 
   const path = [];
   const pos = [];
-  list.forEach(function(x, i){
+  const hereName = activeLocName();
+  let k = 0;
+  list.forEach(function(x){
+    // 换城那天会混着两座城的点（长沙退房 → 高铁 → 景德镇），
+    // 全画上去视野会被拉到 400 公里，另一座城的点只留在地图外面
+    if(ZONE_CITY[x.zone] !== dayCity) return;
     const g = resolveGeo(x);
     if(!g) return;
     x._g = g;
-    x._here = !!(state.locName && g.key === state.locName);
+    x._here = !!(hereName && g.key === hereName);
+    k++;
     const mk = new AMap.Marker({
       position: [g.lng, g.lat],
-      content: markerHTML(x, i + 1),
+      content: markerHTML(x, k),
       offset: new AMap.Pixel(-13, -13),
       zIndex: x.stat === 'ok' ? 100 : 50
     });
@@ -1692,8 +1923,10 @@ function renderMap(plan){
     if(x.stat !== 'skip') path.push([g.lng, g.lat]);
   });
 
-  // 你当前站在哪，单独画一个
-  const home = state.geo || GEO[state.locName];
+  // 你当前站在哪，单独画一个。GPS 坐标可能还是上一座城的，离得远就不画
+  const gps = state.geo;
+  const gpsOk = gps && distM(gps[0], gps[1], dc[0], dc[1]) < 60000;
+  const home = (gpsOk ? gps : null) || GEO[activeLocName()];
   if(home){
     const me = new AMap.Marker({
       position: [home[0], home[1]],
@@ -1709,7 +1942,7 @@ function renderMap(plan){
     if(path.length > 1){
       MAP.line = new AMap.Polyline({
         path: path,
-        strokeColor: '#B33A2B',
+        strokeColor: accentColor(),
         strokeWeight: 3,
         strokeOpacity: .7,
         strokeStyle: 'dashed',
@@ -1722,12 +1955,15 @@ function renderMap(plan){
     } else {
       MAP.map.setZoomAndCenter(15, pos[0]);
     }
+  } else {
+    // 一天里一个点都落不下（比如坐标都没匹配上），至少把镜头挪到对的城市
+    MAP.map.setZoomAndCenter(CITY[dayCity].zoom, dc);
   }
 
   const info = document.getElementById('mapinfo');
   if(info){
-    info.textContent = DAYS[state.day].date + ' · ' + MAP.markers.length + ' 个点'
-      + (state.locName ? ' · 你在' + state.locName : '');
+    info.textContent = DAYS[state.day].date + ' · ' + CITY[dayCity].name + ' · ' + MAP.markers.length + ' 个点'
+      + (activeLocName() ? ' · 你在' + activeLocName() : '');
   }
 }
 
@@ -1786,8 +2022,8 @@ function renderWx(){
   // 用当天最冷那格算体感，晚上要穿什么靠它
   const coldest = w.hours.slice().sort(function(a,b){ return (a.feels||a.temp) - (b.feels||b.temp); })[0] || {};
   const feel = Math.round(coldest.feels || coldest.temp || w.tmin);
-  let line1 = '<b>' + DAYS[dk].date + '</b>' + (desc ? ' · ' + desc : '')
-        + ' · ' + w.tmin + '~' + w.tmax + '℃';
+  let line1 = '<b>' + DAYS[dk].date + '</b> · ' + CITY[cityOf(dk)].name
+        + (desc ? ' · ' + desc : '') + ' · ' + w.tmin + '~' + w.tmax + '℃';
   if(Math.abs(feel - w.tmin) >= 2) line1 += '<span class="dim">（最低体感 ' + feel + '℃）</span>';
 
   let line2 = sp
@@ -1808,11 +2044,14 @@ function renderAll(){
   const plan = replan();
   const reco = recommend(plan);
   lastPlan = plan;
+  // 整站的强调色跟着城市走：长沙朱砂，景德镇青花
+  document.body.dataset.city = cityOf(state.day);
   renderClock();
   renderWx(); renderTabs(); renderLoc(); renderStat(plan); renderFeed(plan); renderReco(plan, reco);
   renderSummary(plan); renderDock(plan);
   if(MAP.map) renderMap(plan);
-  document.getElementById('feedTitle').textContent = DAYS[state.day].date + ' 行程';
+  document.getElementById('feedTitle').textContent =
+    DAYS[state.day].date + ' · ' + CITY[cityOf(state.day)].name + ' 行程';
 }
 
 /* ---- 时间轴：点顶部时间可切换到「某一刻」演练 ---- */
