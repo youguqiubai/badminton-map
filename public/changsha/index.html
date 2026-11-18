@@ -159,6 +159,8 @@ body:not(.booted) .wrap > *:nth-child(4){animation-delay:.12s}
   background:var(--blue2);color:var(--blue);vertical-align:1.5px;font-weight:500;letter-spacing:.02em}
 .tag.g{background:var(--green2);color:var(--green)}
 .tag.a{background:var(--amber2);color:var(--amber)}
+/* 两座城各一个「必去」头牌，实心色，一眼能认出来 */
+.tag.top{background:var(--red);color:var(--card);font-weight:500;letter-spacing:.04em}
 .tag.r{background:var(--red2);color:var(--red)}
 .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;align-items:center}
 .acts button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:9px;
@@ -547,23 +549,26 @@ function cleanName(name){
 const DAYS = {
   D1:{ date:'11.19 周四', city:'cs', start:12*60, end:23*60, sunset:17*60+36, items:[
     {id:'d1a',t:'12:35',name:'酒店放行李',zone:'wu',dur:30,type:'杂',win:null},
-    {id:'d1b',t:'13:00',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:40,type:'吃',win:null},
-    {id:'d1c',t:'14:00',name:'太平街 → 坡子街',zone:'wu',dur:90,type:'逛',win:null},
-    {id:'d1d',t:'15:40',name:'潮宗街',zone:'wu',dur:60,type:'逛',win:null,outdoor:1},
-    {id:'d1e',t:'17:00',name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',win:null},
-    {id:'d1f',t:'18:15',name:'费大厨 / 炊烟 · 晚餐',zone:'wu',dur:90,type:'吃',win:null,notBefore:1050},
-    {id:'d1g',t:'19:50',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null},
-    {id:'d1h',t:'20:50',name:'恋爱天台',zone:'wu',dur:40,type:'拍',win:[600,1320],outdoor:1,nightOk:1}
+    {id:'d1b',t:'13:05',name:'肆姐面粉馆 · 午餐',zone:'wu',dur:45,type:'吃',win:null},
+    {id:'d1c',t:'14:15',name:'橘子洲',zone:'hexi',dur:195,type:'逛',win:[420,1320],outdoor:1,duskOk:1,top:1,
+     note:'落地第一站。地铁 2 号线橘子洲站直达，免费但要实名预约。洲子南北五公里，一定坐观光小火车，走到洲头正好赶上 17:36 的日落'},
+    {id:'d1d',t:'18:00',name:'费大厨 / 炊烟 · 晚餐',zone:'wu',dur:90,type:'吃',win:null,notBefore:1080},
+    {id:'d1e',t:'19:45',name:'太平街 → 坡子街',zone:'wu',dur:80,type:'逛',win:null},
+    {id:'d1f',t:'21:10',name:'黄兴路步行街',zone:'wu',dur:40,type:'逛',win:null},
+    {id:'d1g',t:'21:50',name:'恋爱天台',zone:'wu',dur:40,type:'拍',win:[600,1320],outdoor:1,nightOk:1}
   ]},
   D2:{ date:'11.20 周五', city:'cs', start:9*60, end:23*60, sunset:17*60+35, items:[
-    {id:'d2a',t:'09:00',name:'橘子洲',zone:'hexi',dur:150,type:'逛',win:null,outdoor:1},
-    {id:'d2b',t:'11:50',name:'回市区午餐',zone:'wu',dur:60,type:'吃',win:null},
-    {id:'d2c',t:'14:00',name:'岳麓山索道上山',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
-    {id:'d2d',t:'15:20',name:'山顶 → 爱晚亭',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
-    {id:'d2e',t:'16:40',name:'岳麓书院',zone:'hexi',dur:60,type:'逛',win:[480,1020]},
-    {id:'d2f',t:'18:00',name:'麓山南路 · 晚餐',zone:'hexi',dur:60,type:'吃',win:null,notBefore:1050},
-    {id:'d2g',t:'19:40',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140},
-    {id:'d2h',t:'21:30',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
+    {id:'d2a',t:'09:30',name:'岳麓山索道上山',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1,
+     note:'索道周末常限流停运，出门前查一眼；真停了就步行上山，四十分钟也到顶'},
+    {id:'d2b',t:'11:20',name:'山顶 → 爱晚亭',zone:'hexi',dur:80,type:'逛',win:null,outdoor:1},
+    {id:'d2c',t:'12:40',name:'岳麓书院',zone:'hexi',dur:70,type:'逛',win:[480,1020]},
+    {id:'d2d',t:'13:55',name:'麓山南路 · 午餐',zone:'hexi',dur:60,type:'吃',win:null},
+    {id:'d2e',t:'15:05',name:'湖南大学 → 后湖',zone:'hexi',dur:60,type:'逛',win:null,outdoor:1},
+    {id:'d2f',t:'16:10',name:'IFS 七楼 KAWS',zone:'wu',dur:40,type:'拍',win:null},
+    {id:'d2g',t:'17:00',name:'潮宗街',zone:'wu',dur:60,type:'逛',win:null,outdoor:1,duskOk:1},
+    {id:'d2h',t:'18:15',name:'晚餐 · 五一商圈',zone:'wu',dur:85,type:'吃',win:null,notBefore:1080},
+    {id:'d2i',t:'19:45',name:'超级文和友',zone:'wu',dur:80,type:'玩',win:null,notBefore:1140},
+    {id:'d2j',t:'21:00',name:'杜甫江阁 / 江边',zone:'wu',dur:40,type:'拍',win:null,outdoor:1,nightOk:1}
   ]},
   D3:{ date:'11.21 周六', city:'jdz', start:6*60+10, end:22*60, sunset:17*60+14, items:[
     {id:'d3a',t:'06:20',name:'退房 → 打车去长沙南',zone:'wu',dur:45,type:'行',win:null,
@@ -572,17 +577,18 @@ const DAYS = {
      note:'10:26 到，二等座约 ¥250。长沙南直达景德镇北一天只有 07:23 / 14:08 / 17:28 三班，后两班到那儿天就黑了'},
     {id:'d3c',t:'10:40',name:'打车去陶溪川 · 放行李',zone:'txc',dur:50,type:'行',win:null,nomove:1,
      note:'10:26 到站，出站加打车差不多 10:55 上车、11:15 到陶溪川。打车 ¥25，或坐 901 路。房间没好就先寄存前台'},
-    {id:'d3d',t:'11:25',name:'雕塑瓷厂 · 乐天集市',zone:'txc',dur:45,type:'逛',win:[540,720],
-     note:'园区本身免费，逛店铺不用买票；里面的乐天集市只在周六 9:00–12:00 开，门票 ¥50。你到这个点只剩半小时，觉得不值就只逛园区'},
-    {id:'d3e',t:'12:25',name:'午餐 · 江西菜',zone:'txc',dur:55,type:'吃',win:null,
+    {id:'d3d',t:'11:20',name:'陶阳里 · 御窑厂',zone:'yyc',dur:165,type:'逛',win:[510,1290],top:1,
+     note:'到景德镇的第一站。门票 ¥53、三天内可反复进出；御窑博物馆在景区里面，免费但要单独预约。中午红砖拱门光线硬，想出片就晚上再来一趟，夜景更好看'},
+    {id:'d3e',t:'14:25',name:'午餐 · 抚州弄 · 江西菜',zone:'yyc',dur:55,type:'吃',win:null,
      note:'碱水粑、粉蒸肉、油条包麻糍；冷粉更适合当早饭'},
-    {id:'d3f',t:'13:40',name:'陶阳里 + 御窑博物馆',zone:'yyc',dur:150,type:'逛',win:[510,1290],
-     note:'陶阳里门票 ¥53，三天内可反复进出；御窑博物馆在景区里面，免费但要在小程序单独预约。红砖拱门 15:00–17:00 光线最软，正午拍出来全是死白'},
-    {id:'d3g',t:'16:50',name:'龙珠阁 + 抚州弄小吃',zone:'yyc',dur:60,type:'逛',win:null,outdoor:1,duskOk:1},
-    {id:'d3h',t:'18:10',name:'晚餐 · 陶溪川附近',zone:'txc',dur:55,type:'吃',win:null,notBefore:1080},
-    {id:'d3i',t:'19:30',name:'陶溪川市集',zone:'txc',dur:105,type:'逛',win:null,outdoor:1,nightOk:1,
+    {id:'d3f',t:'15:35',name:'雕塑瓷厂（园区免费）',zone:'txc',dur:70,type:'买',win:[540,1290],
+     note:'园区和店铺都不收门票，平价瓷手串在这儿淘。里面那个乐天集市只在周六 9:00–12:00 开，这个点已经收了，不用惦记'},
+    {id:'d3g',t:'16:55',name:'陶溪川文创街区',zone:'txc',dur:55,type:'逛',win:null,outdoor:1,duskOk:1,
+     note:'旧瓷厂改的，22 栋老厂房和烟囱都原样留着；东北角的「窑与作」最适合拍照'},
+    {id:'d3h',t:'18:00',name:'晚餐 · 陶溪川附近',zone:'txc',dur:55,type:'吃',win:null,notBefore:1080},
+    {id:'d3i',t:'19:07',name:'陶溪川市集',zone:'txc',dur:105,type:'逛',win:null,outdoor:1,nightOk:1,
      note:'市集只在周五、六、日 16:00 之后摆摊，周一至周四来了只有空厂房。白伞区是设计师孤品（¥200–800），只在周五周六晚上出，周日就撤了'},
-    {id:'d3j',t:'21:15',name:'回酒店',zone:'txc',dur:20,type:'行',win:null}
+    {id:'d3j',t:'21:04',name:'回酒店',zone:'txc',dur:20,type:'行',win:null}
   ]},
   D4:{ date:'11.22 周日', city:'jdz', start:8*60, end:21*60+45, sunset:17*60+13, items:[
     {id:'d4a',t:'08:15',name:'早餐 · 冷粉 + 饺子粑',zone:'txc',dur:40,type:'吃',win:null},
@@ -994,7 +1000,8 @@ function replan(){
       else if(cursor < o) cursor = o;
       else if(cursor + it.dur > c + 30) late = '进去时已接近尾声，参观时间会紧';
     }
-    if(!blocked && it.outdoor && !it.nightOk && day.sunset && cursor + it.dur > day.sunset){
+    // duskOk：本来就是冲着黄昏去的（老街咖啡馆、文创街区），别拿日落当「摸黑」判据
+    if(!blocked && it.outdoor && !it.nightOk && !it.duskOk && day.sunset && cursor + it.dur > day.sunset){
       late = '会摸黑，日落后体验打折';
     }
     if(!blocked && cursor + it.dur > day.end){
@@ -1222,6 +1229,7 @@ function renderFeed(plan){
     if(x.stat==='late') tags.push('<span class="tag a">偏晚</span>');
     if(x.stat==='dead') tags.push('<span class="tag r">来不及</span>');
     if(x.stat==='past') tags.push('<span class="tag">已过点</span>');
+    if(x.top) tags.push('<span class="tag top">必去 · 头牌</span>');
     if(x.book){
       tags.push(x.stat==='done' || state.book[x.id]
         ? '<span class="tag g" data-act="book" data-id="' + x.id + '">已约</span>'
