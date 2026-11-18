@@ -322,6 +322,78 @@ body.dark .dk-nav{background:linear-gradient(178deg,#C05B4B,#9E3E31)}
 .reset{border:1px solid var(--line);background:var(--card);color:var(--ink3);border-radius:8px;
   padding:8px 14px;font-size:12.5px;font-family:inherit;width:100%;margin-top:16px;cursor:pointer}
 footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padding:0 20px;line-height:1.8}
+
+/* ---------- 按地点生成攻略 ----------
+   跟上面那套固定四天完全独立：固定行程是「已经排到能直接执行」的版本，
+   这个模块解决的是「换个城市怎么办」——给一个地名或当前坐标，现场搜、现场排。 */
+.genbtn{display:flex;align-items:center;gap:9px;width:100%;margin:0 0 12px;padding:11px 14px;
+  border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);box-shadow:var(--sh1);
+  font-family:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;text-align:left;transition:.15s}
+.genbtn:active{background:var(--press)}
+.genbtn b{font-weight:600}
+.genbtn span{margin-left:auto;color:var(--ink3);font-size:11.5px}
+.gp{position:fixed;inset:0;z-index:60;display:none;overflow-y:auto;background:var(--bg);
+  -webkit-overflow-scrolling:touch;padding-bottom:70px}
+.gp.on{display:block}
+.gp-hd{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:12px 16px;
+  background:var(--bg);border-bottom:1px solid var(--line)}
+.gp-hd h2{flex:1;font-size:14.5px;font-weight:600}
+.gp-hd button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:8px;
+  padding:6px 12px;font-size:12px;font-family:inherit;cursor:pointer}
+.gp-bd{max-width:560px;margin:0 auto;padding:14px 16px 0}
+.gp-in{display:flex;gap:7px;margin-bottom:9px}
+.gp-in input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  padding:10px 12px;font-size:13.5px;font-family:inherit;color:var(--ink);outline:none;transition:.15s}
+.gp-in input:focus{border-color:var(--red)}
+.gp-in button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:10px;
+  padding:0 13px;font-size:12.5px;font-family:inherit;color:var(--ink2);cursor:pointer}
+.gp-seg{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
+.gp-seg button{flex:1;min-width:70px;border:1px solid var(--line);background:var(--card);border-radius:9px;
+  padding:8px 6px;font-size:12px;font-family:inherit;color:var(--ink2);cursor:pointer;transition:.15s}
+.gp-seg button.on{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+.gp-go{width:100%;border:none;border-radius:11px;background:var(--red);color:#fff;font-family:inherit;
+  font-size:14px;font-weight:600;padding:12px;cursor:pointer;margin:2px 0 0}
+.gp-go:disabled{opacity:.55}
+.gp-tip{font-size:11.5px;color:var(--ink3);line-height:1.75;margin:11px 2px 0}
+.gp-day{margin-top:17px}
+.gp-day h3{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--ink3);font-weight:600;
+  letter-spacing:.08em;margin:0 2px 8px}
+.gp-day h3 i{font-style:normal;font-weight:400;letter-spacing:0;color:var(--ink3);font-size:11px;margin-left:auto}
+.gp-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh1);overflow:hidden}
+.gp-row{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line2)}
+.gp-row:last-child{border-bottom:none}
+.gp-row .gt{flex:0 0 45px;font-size:13px;font-weight:700;color:var(--red);
+  font-variant-numeric:tabular-nums;padding-top:1px}
+.gp-row .gb{flex:1;min-width:0}
+.gp-row h4{font-size:14px;font-weight:600;line-height:1.45}
+.gp-row .gm{font-size:11.5px;color:var(--ink3);margin-top:4px}
+.gp-row .gm span{margin-right:9px}
+.gp-row .gs{font-size:11.5px;color:var(--ink2);margin-top:5px;line-height:1.6;
+  padding-left:9px;border-left:2px solid var(--line)}
+.gp-row .ga{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.gp-row .ga a,.gp-row .ga em{border:1px solid var(--line);border-radius:8px;padding:5px 10px;
+  font-size:11.5px;color:var(--ink2);text-decoration:none;font-style:normal}
+.gp-row .ga a{color:var(--red);border-color:#EFD3CE}
+.gp-sc{flex:0 0 auto;align-self:flex-start;text-align:center;min-width:36px;padding-top:2px}
+.gp-sc b{display:block;font-size:15px;font-weight:700;line-height:1.1;color:var(--red);
+  font-variant-numeric:tabular-nums}
+.gp-sc i{font-style:normal;font-size:9.5px;color:var(--ink3);letter-spacing:.05em}
+.gp-sc.mid b{color:var(--amber)}
+.gp-sc.low b{color:var(--ink3)}
+.gp-eat .gt{color:var(--amber)}
+.gp-eat h4{font-weight:500}
+.gp-err{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--red2);color:var(--red);
+  font-size:12.5px;line-height:1.65}
+.gp-load{margin-top:16px;text-align:center;color:var(--ink3);font-size:12.5px;padding:18px 0;line-height:1.8}
+.gp-load:after{content:'';display:inline-block;width:13px;height:13px;margin-left:7px;
+  border:2px solid var(--line);border-top-color:var(--red);border-radius:50%;
+  vertical-align:-2px;animation:gspin .8s linear infinite}
+@keyframes gspin{to{transform:rotate(360deg)}}
+.gp-meta{margin:0 2px 4px;font-size:11.5px;color:var(--ink3);line-height:1.7}
+/* 路线是按地理位置走的，所以「最值得」的名次要单独标出来，不然排序等于没排 */
+.grank{display:inline-block;font-size:10px;color:var(--ink3);border:1px solid var(--line);
+  border-radius:6px;padding:0 5px;margin-left:6px;vertical-align:2px;font-weight:400}
 </style>
 </head>
 <body>
@@ -346,6 +418,10 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
 </div>
 
 <div class="wrap">
+  <button class="genbtn" id="genopen" type="button">
+    <b>按地点生成攻略</b><span>定位或输入任意城市 →</span>
+  </button>
+
   <div class="wx" id="wx">正在取天气…</div>
 
   <div class="mapcard">
@@ -369,12 +445,38 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
   <button class="reset share" id="share">把当前进度发给另一个人</button>
   <button class="reset theme" id="themebtn">外观 · 跟随系统</button>
   <button class="reset" id="reset">重置今天的操作</button>
-  <footer>前两天在长沙，后两天去景德镇，页面整体配色会跟着换：朱砂是长沙，青花是景德镇。<br>
+  <footer>顶上的「按地点生成攻略」是另一个入口：定位或输入任意城市，现场去高德搜景点，按值得指数排序再排成路线。这里的四天是手动排到可以直接执行的版本，两边互不影响。<br>
+  前两天在长沙，后两天去景德镇，页面整体配色会跟着换：朱砂是长沙，青花是景德镇。<br>
   推荐会跟着时间段变：早上推早饭和近处的点，傍晚推日落和江景，深夜只推夜宵；换城之后推荐池也跟着换，不会拿长沙的夜宵来填景德镇的空档。<br>
   点顶部大时间可以切到「某一刻」演练，提前看那个点该去哪。点「到了」记为已完成，点「跳过」移除，后面的时间和推荐立刻重算。<br>
   雨天会自动把户外项标出来，并给一个就近的室内替代（可还原）。<br>
   天气来自 wttr.in，长沙和景德镇分别拉，都只给 3 天，出发后每天打开就能看到当天。景德镇那几个点的坐标是片区内估算，画到地图上时用高德再校准一次。<br>
   地图的高德 Key 只存在这台手机的浏览器里，页面源码中没有；点行程行可以让地图定位到那个点。数据只存在本机。</footer>
+</div>
+
+<div class="gp" id="gp">
+  <div class="gp-hd">
+    <h2 id="gptitle">按地点生成攻略</h2>
+    <button id="gpclose" type="button">关闭</button>
+  </div>
+  <div class="gp-bd">
+    <div class="gp-in">
+      <input id="gpin" placeholder="输入城市或地点，如 成都 / 西湖 / 泉州" autocomplete="off" spellcheck="false">
+      <button id="gpgeo" type="button">用当前位置</button>
+    </div>
+    <div class="gp-seg" id="gpmode">
+      <button data-m="day" class="on" type="button">当天一条线</button>
+      <button data-m="multi" type="button">多天攻略</button>
+    </div>
+    <div class="gp-seg" id="gpdays" style="display:none">
+      <button data-d="2" class="on" type="button">2 天</button>
+      <button data-d="3" type="button">3 天</button>
+      <button data-d="4" type="button">4 天</button>
+    </div>
+    <button class="gp-go" id="gpgo" type="button">生成</button>
+    <p class="gp-tip">景点来自高德的城市检索，按「值得指数」排序：景区等级、平台评分、是否标志性（博物院／古城／遗址／故居）加分，离得太远扣分，停车场、售票处、商场、地铁站这类直接剔掉。指数只是排序依据，不是质量评分。</p>
+    <div id="gpout"></div>
+  </div>
 </div>
 
 <div class="dock" id="dock">
@@ -2181,6 +2283,526 @@ function renderWx(){
   el.className = 'wx' + (sp ? ' raining' : '');
 }
 
+/* ---------- 按地点生成攻略 ----------
+   跟上面那套固定四天是两条互不干扰的线：固定行程已经排到能直接执行，
+   这里解决的是「换个城市怎么办」——给地名或当前坐标，现场搜、现场排。
+
+   排序口径（值得指数 0–100）：
+     基础 38｜国家级/5A/世界遗产 +24｜博物院/博物馆/美术馆 +20｜古城/遗址/故居/书院 +16
+     寺塔阁楼 +10｜山湖岛洲 +9｜步行街文创 +3｜平台评分 (r-3.8)×30（限 -10~+18）
+     离出发点超过 3km 每公里扣 0.8（最多扣 20）｜停车场/售票处/商场/地铁站这类直接判死
+   这就是「最值得打卡」的可解释代理：不是评分榜，但每一项都能说清为什么排在这里。 */
+
+const GEN = {
+  open:false, mode:'day', days:2,
+  origin:null,        // {name, lng, lat, city}
+  city:'',
+  ranked:[], plan:null,
+  busy:false, err:''
+};
+
+const GEN_WD = ['周日','周一','周二','周三','周四','周五','周六'];
+function genDate(off){
+  const d = new Date(); d.setDate(d.getDate() + off);
+  return (d.getMonth() + 1) + '.' + d.getDate() + ' ' + GEN_WD[d.getDay()];
+}
+
+// 高德的坐标是 LngLat 对象，测试里是数组，统一成 {lng, lat} 再用，免得满屏下标
+function toLL(loc){
+  if(!loc) return null;
+  if(typeof loc.getLng === 'function') return {lng: loc.getLng(), lat: loc.getLat()};
+  if(loc.lng != null) return {lng: +loc.lng, lat: +loc.lat};
+  if(loc[0] != null) return {lng: +loc[0], lat: +loc[1]};
+  return null;
+}
+
+function havKm(a, b){
+  if(!a || !b) return 0;
+  const R = 6371, rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad, dLon = (b.lng - a.lng) * rad;
+  const s = Math.pow(Math.sin(dLat / 2), 2)
+          + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.pow(Math.sin(dLon / 2), 2);
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/* 权重表：越靠前的特征越能说明「这个地方非来不可」 */
+const GEN_BOOST = [
+  [/故宫|皇宫|皇陵|陵|长城|石窟|大佛|摩崖|布达拉|圣地/, 14, '不可复制'],
+  [/5A|AAAAA|AAAA|国家级|世界遗产|重点文物保护/i, 24, '国家级'],
+  [/博物院|博物馆|展览馆|美术馆|纪念馆/, 20, '馆藏'],
+  [/古城|古镇|古街|老街|历史街区|遗址|故居|书院|王府|衙署|会馆/, 16, '古迹'],
+  [/寺|庙|道观|教堂|塔|阁|楼|碑|祠/, 10, '古建'],
+  [/山|峰|岛|洲|湖|湿地|江|河|瀑布|峡谷|溶洞|森林/, 9, '自然'],
+  [/公园|花园|园林/, 8, '园林'],
+  [/步行街|文创|艺术区|创意园/, 3, '街区']
+];
+
+/* 这些不是「景点」，是景点旁边的功能性设施。不剔掉会把停车场排成第一名 */
+const GEN_JUNK = /停车场|售票|入口|出口|管理处|服务中心|游客中心|咨询|派出所|有限公司|分公司|酒店|宾馆|公寓|小区|学校|学院|大学$|医院|银行|超市|便利店|地铁站|公交站|充电|加油站|厕所|洗手间|大门|售楼|中介|快递|营业厅|药房|门诊|市场$|家具|建材|五金|汽修|驾校/;
+
+function genScore(p, from){
+  const name = p.name || '', type = p.type || '';
+  let s = 38;
+  const why = [];
+  GEN_BOOST.forEach(function(b){
+    if(b[0].test(name) || b[0].test(type)){
+      s += b[1];
+      if(why.indexOf(b[2]) < 0) why.push(b[2]);
+    }
+  });
+  const rt = p.rating || 0;
+  if(rt > 0){
+    s += Math.max(-10, Math.min(18, Math.round((rt - 3.8) * 30)));
+    if(rt >= 4.5) why.push('评分 ' + rt);
+  }
+  const d = from ? havKm(from, p.ll) : 0;
+  if(d > 3) s -= Math.min(20, Math.round((d - 3) * 0.8));
+  if(GEN_JUNK.test(name)) s -= 70;
+  return {score: Math.max(0, Math.min(100, Math.round(s))), why: why};
+}
+
+/* 停留时长按类型给，别给所有点都塞 90 分钟 —— 一个故居和一整座山不可能一样。
+   顺序有讲究：「景山公园」先命中公园，不能因为带个「山」字就按爬山算 95 分钟 */
+function genDur(p){
+  const t = (p.name || '') + (p.type || '');
+  if(/博物院|博物馆|展览馆|美术馆/.test(t)) return 100;
+  if(/公园|广场|花园/.test(t)) return 65;
+  if(/山|岛|洲|峡谷|溶洞|森林|湿地/.test(t)) return 95;
+  if(/古城|古镇|古街|老街|步行街|文创|艺术区/.test(t)) return 80;
+  if(/寺|塔|阁|楼|故居|书院|遗址|碑|祠/.test(t)) return 50;
+  return 60;
+}
+
+/* 通勤：短距离走路，中距离也是走路（老城区开车反而慢），超过 3km 才打车 */
+function genTravel(a, b){
+  const km = havKm(a, b);
+  if(km < 1.2) return {min: Math.max(3, Math.round(km * 13)), km: km, mode: 'walk'};
+  if(km < 3.2) return {min: Math.round(km * 11), km: km, mode: 'walk'};
+  return {min: Math.min(50, Math.round(km * 2.8 + 8)), km: km, mode: 'car'};
+}
+
+/* 同一天里按「离上一个点多近」贪心走，不做全局最优——城市半日游里贪心和最优差不了几分钟，
+   但贪心出的顺序更像人会走的路，不会为了少走 200 米把两个区来回切 */
+function genOrder(list, start){
+  const left = list.slice(), out = [];
+  let cur = start;
+  while(left.length){
+    let bi = 0, bd = 1e9;
+    left.forEach(function(p, i){
+      const d = havKm(cur, p.ll);
+      if(d < bd){ bd = d; bi = i; }
+    });
+    const p = left.splice(bi, 1)[0];
+    p._km = bd;
+    out.push(p);
+    cur = p.ll;
+  }
+  return out;
+}
+
+/* 多天：每天拿分最高的当锚点，再往里塞离它近的。这样切出来的天是「一片一片」的，
+   不会出现上午城东下午城西 */
+function genCluster(ranked, days){
+  const left = ranked.slice(), out = [];
+  for(let d = 0; d < days && left.length; d++){
+    const seed = left.shift();
+    const grp = [seed];
+    const cap = d === days - 1 ? 9 : 4;
+    while(grp.length < cap && left.length){
+      let bi = 0, bd = 1e9;
+      left.forEach(function(p, i){
+        const dd = havKm(seed.ll, p.ll);
+        if(dd < bd){ bd = dd; bi = i; }
+      });
+      if(bd > 18) break;                 // 太远就不硬凑，宁可这天少一个点
+      grp.push(left.splice(bi, 1)[0]);
+    }
+    out.push(grp);
+  }
+  return out;
+}
+
+/* 排时间轴。规则：到了饭点先吃再逛；超过 21:00 就不再塞新点，
+   剩下的宁可空着也不排成「23 点还在赶第三个景点」 */
+function genFill(seq, start, origin){
+  const rows = [];
+  let cur = start, prev = origin;
+  let lunch = start > 13 * 60 + 20, dinner = start > 20 * 60;
+  for(let i = 0; i < seq.length; i++){
+    const p = seq[i];
+    const tr = genTravel(prev, p.ll);
+    let t = cur + tr.min;
+
+    if(!lunch && t >= 11 * 60 + 20){
+      t = Math.max(t, 11 * 60 + 40);
+      rows.push({kind: 'eat', t: t, name: '午餐 · 附近挑一家', dur: 50, near: p.ll, sub: ''});
+      cur = t + 50; lunch = true; t = cur;
+    }
+    if(!dinner && t >= 17 * 60 + 20){
+      t = Math.max(t, 17 * 60 + 45);
+      rows.push({kind: 'eat', t: t, name: '晚餐 · 附近挑一家', dur: 60, near: p.ll, sub: ''});
+      cur = t + 60; dinner = true; t = cur;
+    }
+    if(t > 21 * 60) break;
+
+    rows.push({kind: 'poi', t: t, poi: p, dur: p.dur, move: tr});
+    cur = t + p.dur + 10;               // 留 10 分钟喘气，别把每一分钟都填满
+    prev = p.ll;
+  }
+  return rows;
+}
+
+/* ---------- 高德调用 ---------- */
+
+function genPlugins(){
+  return new Promise(function(res, rej){
+    if(!window.AMap) return rej(new Error('高德还没加载。先在下面「设置 Key」填一次，再回来生成'));
+    if(!AMap.plugin) return res();
+    AMap.plugin(['AMap.PlaceSearch', 'AMap.Geolocation', 'AMap.Geocoder'],
+      function(){ res(); });
+  });
+}
+
+function genLocate(){
+  return new Promise(function(res, rej){
+    const geo = new AMap.Geolocation({timeout: 12000, enableHighAccuracy: true});
+    geo.getCurrentPosition(function(st, r){
+      if(st !== 'complete' || !r.position){
+        return rej(new Error('定位没成功（' + ((r && (r.message || r.info)) || '浏览器不给') + '）。改成输入城市名更快'));
+      }
+      const ac = r.addressComponent || {};
+      const city = ac.city || ac.province || '';
+      const out = {name: '我的位置', ll: toLL(r.position), city: city};
+      if(city) return res(out);
+      // 直辖市或定位精度不够时可能没有 city 字段，再反查一次
+      const gc = new AMap.Geocoder({});
+      gc.getAddress([out.ll.lng, out.ll.lat], function(s2, r2){
+        if(s2 === 'complete' && r2.regeocode){
+          const c = r2.regeocode.addressComponent || {};
+          out.city = c.city || c.province || '';
+          out.name = r2.regeocode.formattedAddress || '我的位置';
+        }
+        res(out);
+      });
+    });
+  });
+}
+
+function genResolve(text){
+  return new Promise(function(res, rej){
+    const ps = new AMap.PlaceSearch({pageSize: 5, extensions: 'all'});
+    ps.search(text, function(st, r){
+      const pois = (st === 'complete' && r.poiList && r.poiList.pois) || [];
+      if(pois.length){
+        const p = pois[0];
+        return res({name: p.name || text, ll: toLL(p.location), city: p.cityname || p.adname || text});
+      }
+      const gc = new AMap.Geocoder({});
+      gc.getLocation(text, function(s2, r2){
+        const g = (s2 === 'complete' && r2.geocodes && r2.geocodes[0]) || null;
+        if(!g) return rej(new Error('没找到「' + text + '」。试试只写城市名，比如「成都」'));
+        const ac = g.addressComponent || {};
+        res({name: text, ll: toLL(g.location), city: ac.city || ac.province || text});
+      });
+    });
+  });
+}
+
+/* 一个城市搜几个不同词：光搜「景点」会漏掉博物馆，光搜「博物馆」会漏掉古城。
+   合并去重后交给打分去筛 */
+const GEN_KW = ['景点', '博物馆', '古城', '古镇', '公园', '寺', '故居', '步行街'];
+
+function genSearchCity(city){
+  return new Promise(function(res){
+    const ps = new AMap.PlaceSearch({city: city, citylimit: true, pageSize: 50, extensions: 'all'});
+    const seen = {}, out = [];
+    let i = 0;
+    (function next(){
+      if(i >= GEN_KW.length) return res(out);
+      const kw = GEN_KW[i++];
+      ps.search(kw, function(st, r){
+        if(st === 'complete' && r.poiList && r.poiList.pois){
+          r.poiList.pois.forEach(function(p){
+            if(!p.id || seen[p.id]) return;
+            const name = p.name || '';
+            if(!name) return;
+            seen[p.id] = 1;
+            out.push({
+              id: p.id, name: name, type: p.type || '', ll: toLL(p.location),
+              addr: p.address || '',
+              rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
+              open: (p.biz_ext && p.biz_ext.open_time) || ''
+            });
+          });
+        }
+        next();
+      });
+    })();
+  });
+}
+
+/* 吃饭：以景点为中心搜 1.2km 内的餐厅，取评分最高的那家。
+   搜不到就留着「附近挑一家」，不编一个店名出来 */
+function genEatNear(ll){
+  return new Promise(function(res){
+    const ps = new AMap.PlaceSearch({pageSize: 25, extensions: 'all'});
+    ps.searchNearBy('餐厅', [ll.lng, ll.lat], 1200, function(st, r){
+      const pois = (st === 'complete' && r.poiList && r.poiList.pois) || [];
+      const list = pois.map(function(p){
+        return {
+          name: p.name || '', ll: toLL(p.location), addr: p.address || '',
+          rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
+          cost: (p.biz_ext && p.biz_ext.cost) || ''
+        };
+      }).filter(function(p){ return p.name && p.rating >= 4; });
+      list.sort(function(a, b){ return b.rating - a.rating; });
+      res(list[0] || null);
+    });
+  });
+}
+
+/* ---------- 组装 ---------- */
+
+function genBuild(){
+  const from = GEN.origin;
+  const scored = GEN.pois.map(function(p){
+    const r = genScore(p, from.ll);
+    p.score = r.score; p.why = (r.why || []).slice(); p.dur = genDur(p);
+    return p;
+  }).filter(function(p){ return p.score >= 45 && p.ll; });
+
+  scored.sort(function(a, b){ return b.score - a.score; });
+
+  // 同名去重（高德同一个地方常有两条记录），只留分高的那条
+  const seen = {}, ranked = [];
+  scored.forEach(function(p){
+    const k = p.name.replace(/\s/g, '');
+    if(seen[k]) return;
+    seen[k] = 1; ranked.push(p);
+  });
+  GEN.ranked = ranked.slice(0, 26);
+
+  if(!GEN.ranked.length){
+    throw new Error('没搜到像样的景点。试试换成城市名，或者把范围放宽一点');
+  }
+
+  const days = [];
+  if(GEN.mode === 'day'){
+    // 当天：优先 12km 内，凑不满再放宽到全城
+    let pool = GEN.ranked.filter(function(p){ return havKm(from.ll, p.ll) <= 12; });
+    if(pool.length < 3) pool = GEN.ranked;
+    const start = Math.max(nowMin() + 25, 8 * 60 + 30);
+    days.push({
+      label: '今天 · ' + genDate(0),
+      rows: genFill(genOrder(pool.slice(0, 6), from.ll), start, from.ll)
+    });
+  } else {
+    const grp = genCluster(GEN.ranked, GEN.days);
+    grp.forEach(function(list, i){
+      const startLL = i === 0 ? from.ll : list[0].ll;
+      days.push({
+        label: '第 ' + (i + 1) + ' 天 · ' + genDate(i),
+        rows: genFill(genOrder(list, startLL), i === 0 ? 9 * 60 : 9 * 60, startLL)
+      });
+    });
+  }
+
+  // 把「附近挑一家」换成真的店名，串行跑，别把 QPS 打满
+  const jobs = [];
+  days.forEach(function(d){
+    d.rows.forEach(function(r){ if(r.kind === 'eat' && r.near) jobs.push(r); });
+  });
+  let i = 0;
+  return new Promise(function(res){
+    (function next(){
+      if(i >= jobs.length) return res();
+      const r = jobs[i++];
+      genEatNear(r.near).then(function(e){
+        if(e){
+          r.name = e.name;
+          r.sub = '评分 ' + e.rating + (e.cost ? ' · 人均 ¥' + e.cost : '');
+          r.ll = e.ll; r.rating = e.rating;
+        }
+        next();
+      }).catch(function(){ next(); });
+    })();
+  }).then(function(){
+    GEN.plan = {
+      days: days.filter(function(d){ return d.rows.length; }),
+      stats: {found: GEN.pois.length, kept: GEN.ranked.length}
+    };
+  });
+}
+
+function genGo(){
+  if(GEN.busy) return;
+  const el = document.getElementById('gpin');
+  const txt = ((el && el.value) || '').trim();
+  if(!MAP.key){
+    GEN.err = '还没有高德 Key。先关掉这个面板，点地图卡片上的「设置 Key」，服务平台选「Web端(JS API)」，填完再回来';
+    return genRender();
+  }
+  GEN.busy = true; GEN.err = ''; GEN.plan = null;
+  genStatus('正在解析地点…');
+
+  genPlugins()
+    .then(function(){ return txt ? genResolve(txt) : genLocate(); })
+    .then(function(o){
+      if(!o || !o.ll) throw new Error('没拿到坐标');
+      GEN.origin = o;
+      GEN.city = o.city || txt;
+      genStatus('正在搜 ' + GEN.city + ' 的景点…');
+      return genSearchCity(GEN.city);
+    })
+    .then(function(list){
+      GEN.pois = list || [];
+      genStatus('筛出 ' + GEN.pois.length + ' 个候选，正在排序排线…');
+      return genBuild();
+    })
+    .then(function(){ GEN.busy = false; genRender(); })
+    .catch(function(e){
+      GEN.busy = false;
+      GEN.err = (e && e.message) || String(e);
+      genRender();
+    });
+}
+
+/* ---------- 渲染 ---------- */
+
+function genStatus(msg){
+  const box = document.getElementById('gpout');
+  if(box) box.innerHTML = '<div class="gp-load">' + msg + '</div>';
+}
+
+function genScoreTxt(p){
+  const d = GEN.origin ? havKm(GEN.origin.ll, p.ll) : 0;
+  const bits = (p.why || []).slice();
+  if(d >= 0.9) bits.push('距出发点 ' + d.toFixed(1) + 'km');
+  if(p.open) bits.push('开放 ' + p.open);
+  return bits.length ? bits.join(' · ') : '城市常规景点';
+}
+
+function genNav(p){
+  return 'https://uri.amap.com/navigation?to=' + p.ll.lng + ',' + p.ll.lat + ','
+    + encodeURIComponent(p.name) + '&mode=car&coordinate=gaode&callnative=1&src=cs-live';
+}
+
+function genRowHTML(r){
+  if(r.kind === 'eat'){
+    return '<div class="gp-row gp-eat"><div class="gt">' + fmt(r.t) + '</div>'
+      + '<div class="gb"><h4>' + r.name + '</h4>'
+      + '<div class="gm"><span>吃饭</span><span>预留 ' + r.dur + ' 分</span>' + (r.sub ? '<span>' + r.sub + '</span>' : '') + '</div>'
+      + (r.ll ? '<div class="ga"><a href="' + genNav(r) + '" target="_blank" rel="noopener">导航</a></div>' : '')
+      + '</div></div>';
+  }
+  const p = r.poi;
+  const cls = p.score >= 70 ? '' : (p.score >= 55 ? ' mid' : ' low');
+  const gym = (p.type || '').split(';').pop() || '景点';
+  const rk = GEN.ranked.indexOf(p) + 1;
+  const badge = (rk > 0 && rk <= 12) ? '<span class="grank">#' + rk + '</span>' : '';
+  return '<div class="gp-row"><div class="gt">' + fmt(r.t) + '</div>'
+    + '<div class="gb"><h4>' + p.name + badge + '</h4>'
+    + '<div class="gm"><span>' + gym + '</span><span>逛 ' + r.dur + ' 分</span>'
+    + (r.move && r.move.min ? '<span>' + (r.move.mode === 'car' ? '打车' : '步行') + ' ' + r.move.min + ' 分</span>' : '')
+    + '</div>'
+    + '<div class="gs">' + genScoreTxt(p) + '</div>'
+    + '<div class="ga"><a href="' + genNav(p) + '" target="_blank" rel="noopener">导航</a></div>'
+    + '</div><div class="gp-sc' + cls + '"><b>' + p.score + '</b><i>值得</i></div></div>';
+}
+
+function genRankHTML(){
+  const top = GEN.ranked.slice(0, 8);
+  if(!top.length) return '';
+  const rows = top.map(function(p, i){
+    const d = GEN.origin ? havKm(GEN.origin.ll, p.ll) : 0;
+    const cls = p.score >= 70 ? '' : (p.score >= 55 ? ' mid' : ' low');
+    return '<div class="gp-row"><div class="gt">' + (i + 1) + '</div>'
+      + '<div class="gb"><h4>' + p.name + '</h4>'
+      + '<div class="gm"><span>' + ((p.type || '').split(';').pop() || '景点') + '</span>'
+      + (d >= 0.9 ? '<span>' + d.toFixed(1) + ' km</span>' : '')
+      + '</div><div class="gs">' + genScoreTxt(p) + '</div></div>'
+      + '<div class="gp-sc' + cls + '"><b>' + p.score + '</b><i>值得</i></div></div>';
+  }).join('');
+  return '<div class="gp-day"><h3>最值得去的 ' + top.length + ' 个<i>按值得指数排</i></h3>'
+    + '<div class="gp-card">' + rows + '</div></div>';
+}
+
+function genRender(){
+  const box = document.getElementById('gpout');
+  if(!box) return;
+  if(GEN.busy) return;                       // 进度由 genStatus 接管
+  if(GEN.err){
+    box.innerHTML = '<div class="gp-err">' + GEN.err + '</div>';
+    return;
+  }
+  if(!GEN.plan){ box.innerHTML = ''; return; }
+
+  const st = GEN.plan.stats || {};
+  let h = '<div class="gp-meta">' + (GEN.origin ? GEN.origin.name + ' · ' + (GEN.city || '') : '')
+        + '　搜到 ' + st.found + ' 个，筛出 ' + st.kept + ' 个，排进 ' + GEN.plan.days.length + ' 天</div>';
+
+  /* 路线必须按地理位置走，否则一天要横穿两次城。但用户要的是「最值得」的排序，
+     所以先给一张纯按指数排的榜，下面的路线里再用 #名次 告诉你在全城排第几 */
+  h += genRankHTML();
+
+  GEN.plan.days.forEach(function(d){
+    const n = d.rows.filter(function(r){ return r.kind === 'poi'; }).length;
+    h += '<div class="gp-day"><h3>' + d.label + '<i>' + n + ' 个点</i></h3><div class="gp-card">'
+      + d.rows.map(genRowHTML).join('') + '</div></div>';
+  });
+
+  if(GEN.mode === 'day' && GEN.plan.days.length){
+    const last = GEN.plan.days[0].rows.slice(-1)[0];
+    if(last) h += '<p class="gp-tip">排到 ' + fmt(last.t + (last.kind === 'poi' ? last.dur : last.dur)) + ' 收工。'
+      + '想多去几个就把「多天攻略」打开，或者明天再点一次生成。</p>';
+  }
+  box.innerHTML = h;
+}
+
+function genBind(){
+  const open = document.getElementById('genopen');
+  if(open) open.onclick = function(){
+    GEN.open = true;
+    const gp = document.getElementById('gp');
+    if(gp) gp.classList.add('on');
+    document.body.style.overflow = 'hidden';
+  };
+  const close = document.getElementById('gpclose');
+  if(close) close.onclick = function(){
+    GEN.open = false;
+    const gp = document.getElementById('gp');
+    if(gp) gp.classList.remove('on');
+    document.body.style.overflow = '';
+  };
+  const go = document.getElementById('gpgo');
+  if(go) go.onclick = genGo;
+
+  const geo = document.getElementById('gpgeo');
+  if(geo) geo.onclick = function(){
+    const el = document.getElementById('gpin');
+    if(el) el.value = '';
+    genGo();
+  };
+
+  const modeBox = document.getElementById('gpmode');
+  if(modeBox) modeBox.onclick = function(e){
+    const b = e.target.closest ? e.target.closest('button[data-m]') : null;
+    if(!b) return;
+    GEN.mode = b.dataset.m;
+    modeBox.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    const dd = document.getElementById('gpdays');
+    if(dd) dd.style.display = GEN.mode === 'multi' ? 'flex' : 'none';
+  };
+
+  const dayBox = document.getElementById('gpdays');
+  if(dayBox) dayBox.onclick = function(e){
+    const b = e.target.closest ? e.target.closest('button[data-d]') : null;
+    if(!b) return;
+    GEN.days = +b.dataset.d;
+    dayBox.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); });
+  };
+}
+
 function renderAll(){
   const plan = replan();
   const reco = recommend(plan);
@@ -2230,6 +2852,7 @@ if(!window.isSecureContext){
 
 bindMapBar();
 initMap();  // 有 Key 才会真加载，没有就显示填写入口
+genBind();  // 按地点生成：只绑定事件，不主动发请求
 loadWX();   // 异步取天气，回来自己会重渲染
 
 document.getElementById('share').onclick = doShare;
