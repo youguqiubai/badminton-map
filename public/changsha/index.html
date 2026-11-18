@@ -219,6 +219,14 @@ body.dark .navbtn{background:linear-gradient(178deg,#C05B4B,#9E3E31);box-shadow:
   font-size:12.5px;font-family:inherit;background:var(--card);color:var(--ink)}
 .mapnoset button{margin-top:4px;border:1px solid var(--red);background:var(--red);color:#fff;
   border-radius:8px;padding:7px 16px;font-size:13px;font-family:inherit;cursor:pointer}
+/* 没配 Key 时地图收成一行，别一进门就是一个填 Key 的表单 */
+.mapcard.off #map{height:auto;min-height:0}
+.mapcard.off .mapbar{display:none}
+.mapcard.off .mapnoset{position:static;inset:auto;flex-direction:row;align-items:center;
+  justify-content:flex-start;gap:10px;padding:12px 14px;text-align:left;background:var(--card2);cursor:pointer}
+.mapcard.off .mapnoset b{font-size:12.5px;font-weight:500;color:var(--ink2)}
+.mapcard.off .mapnoset span{display:none}
+.mapnoset .kmore{font-style:normal;font-size:11.5px;color:var(--red);margin-left:auto;white-space:nowrap}
 .mapbar{display:flex;align-items:center;gap:8px;padding:7px 11px;border-top:1px solid var(--line);background:var(--card3)}
 .mapbar span{font-size:11.5px;color:var(--ink3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mapbar button{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:6px;
@@ -2044,10 +2052,22 @@ function loadAmpLib(){
   });
 }
 
-function renderMapSet(){
+/* 地图要单独配一次 Key（JS API 的瓦片只能在浏览器里渲染，绕不开）。
+   但生成攻略已经走服务器代理了，不需要 Key —— 所以这里默认收成一行，
+   别让访客一进门就先撞上一个填 Key 的表单 */
+function renderMapSet(expand){
   const box = document.getElementById('mapnoset');
   if(!box) return;
+  const card = document.querySelector ? document.querySelector('.mapcard') : null;
+  if(card) card.classList.toggle('off', !expand);
   box.style.display = 'flex';
+
+  if(!expand){
+    box.innerHTML = '<b>地图要单独配一次高德 Key</b><i class="kmore">可选，生成攻略不需要 · 点这里</i>';
+    box.onclick = function(){ renderMapSet(true); };
+    return;
+  }
+  box.onclick = null;
   box.innerHTML = '<b>看地图前，先填一次高德 Key</b>'
     + '<span>控制台 → 应用管理 → 我的应用 → 添加 Key，服务平台选「<b>Web端(JS API)</b>」<br>'
     + '同一页面的「安全密钥 jscode」也要填，漏了地图会报 INVALID_USER_SCODE</span>'
@@ -2071,9 +2091,11 @@ function renderMapSet(){
 }
 
 async function initMap(){
-  if(!MAP.key){ renderMapSet(); return; }
+  if(!MAP.key){ renderMapSet(false); return; }
   const box = document.getElementById('mapnoset');
   if(box){ box.style.display = 'none'; }
+  const card = document.querySelector ? document.querySelector('.mapcard') : null;
+  if(card) card.classList.remove('off');
 
   try{
     await loadAmpLib();
@@ -2452,113 +2474,162 @@ function genFill(seq, start, origin){
   return rows;
 }
 
-/* ---------- 高德调用 ---------- */
+/* ---------- 高德调用 ----------
+   不再用浏览器端的 JS API 检索：那样必须让每个人自己填一次 Key。
+   现在统一走自己服务器上的代理（/api/amap/*），Key 只存在服务器文件里，
+   访客打开就能用，源码里也抄不到东西。 */
 
-function genPlugins(){
-  return new Promise(function(res, rej){
-    if(!window.AMap) return rej(new Error('高德还没加载。先在下面「设置 Key」填一次，再回来生成'));
-    if(!AMap.plugin) return res();
-    AMap.plugin(['AMap.PlaceSearch', 'AMap.Geolocation', 'AMap.Geocoder'],
-      function(){ res(); });
-  });
+/* 代理只在阿里云那台机器上。GitHub Pages 的 HTTPS 副本没有后端，
+   跨域 + 混合内容两道墙都过不去，所以在这里就拦住并说清楚，别让它报一个 404 让人猜 */
+const GEN_API = (function(){
+  try{
+    if(/\.github\.io$/.test(location.hostname)) return null;
+    return '/api/amap/';
+  }catch(e){ return '/api/amap/'; }
+}());
+
+function genApi(path, params){
+  if(!GEN_API){
+    return Promise.reject(new Error('这个 HTTPS 副本没有后端。生成功能请打开 http://121.43.173.154/changsha/'));
+  }
+  const qs = Object.keys(params || {})
+    .filter(function(k){ return params[k] != null && params[k] !== ''; })
+    .map(function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); })
+    .join('&');
+  return fetch(GEN_API + path + (qs ? '?' + qs : ''), {headers: {'Accept': 'application/json'}})
+    .then(function(r){
+      return r.json().catch(function(){
+        throw new Error('代理没返回 JSON（HTTP ' + r.status + '）');
+      });
+    })
+    .then(function(j){
+      if(!j || !j.ok){
+        if(j && j.code === 'KEY_MISSING') throw new Error('服务端还没配高德 Key（/etc/changsha-amap/key），配好后重启代理服务');
+        if(j && j.code === 'RATE') throw new Error('请求太频繁了，等一分钟再点一次');
+        throw new Error((j && j.msg) || '接口出错');
+      }
+      return j.data;
+    });
 }
 
+/* 高德 Web 接口返回的是 "lng,lat" 字符串，跟 JS SDK 的对象格式不一样 */
+function parseLL(s){
+  if(!s) return null;
+  if(typeof s !== 'string') return toLL(s);
+  const p = s.split(',');
+  if(p.length < 2 || isNaN(+p[0]) || isNaN(+p[1])) return null;
+  return {lng: +p[0], lat: +p[1]};
+}
+
+function mapPois(list){
+  return (list || []).map(function(p){
+    return {
+      id: p.id, name: p.name || '', type: p.type || '', typecode: p.typecode || '',
+      ll: parseLL(p.location), addr: p.address || '', city: p.cityname || '',
+      rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
+      cost: (p.biz_ext && p.biz_ext.cost) || '',
+      open: (p.biz_ext && p.biz_ext.open_time) || ''
+    };
+  }).filter(function(p){ return p.name && p.ll; });
+}
+
+/* 定位：https 下要真实坐标，http 下浏览器不给，只能退回高德的 IP 定位（精度到城市） */
 function genLocate(){
   return new Promise(function(res, rej){
-    const geo = new AMap.Geolocation({timeout: 12000, enableHighAccuracy: true});
-    geo.getCurrentPosition(function(st, r){
-      if(st !== 'complete' || !r.position){
-        return rej(new Error('定位没成功（' + ((r && (r.message || r.info)) || '浏览器不给') + '）。改成输入城市名更快'));
-      }
-      const ac = r.addressComponent || {};
-      const city = ac.city || ac.province || '';
-      const out = {name: '我的位置', ll: toLL(r.position), city: city};
-      if(city) return res(out);
-      // 直辖市或定位精度不够时可能没有 city 字段，再反查一次
-      const gc = new AMap.Geocoder({});
-      gc.getAddress([out.ll.lng, out.ll.lat], function(s2, r2){
-        if(s2 === 'complete' && r2.regeocode){
-          const c = r2.regeocode.addressComponent || {};
-          out.city = c.city || c.province || '';
-          out.name = r2.regeocode.formattedAddress || '我的位置';
+    function byIP(){
+      genApi('ip', {}).then(function(d){
+        const city = typeof d.city === 'string' ? d.city : (typeof d.province === 'string' ? d.province : '');
+        if(!city) return rej(new Error('IP 定位也没拿到城市，直接输入地名吧'));
+        // rectangle 是 "lng1,lat1;lng2,lat2"，取中心当出发点
+        let ll = null;
+        if(typeof d.rectangle === 'string' && d.rectangle.indexOf(';') > 0){
+          const a = d.rectangle.split(';')[0].split(','), b = d.rectangle.split(';')[1].split(',');
+          if(a.length === 2 && b.length === 2){
+            ll = {lng: (+a[0] + +b[0]) / 2, lat: (+a[1] + +b[1]) / 2};
+          }
         }
-        res(out);
-      });
-    });
+        res({name: city + '（按网络定位）', ll: ll, city: city});
+      }).catch(rej);
+    }
+
+    if(navigator.geolocation && window.isSecureContext){
+      navigator.geolocation.getCurrentPosition(function(pos){
+        const ll = {lng: +pos.coords.longitude.toFixed(6), lat: +pos.coords.latitude.toFixed(6)};
+        genApi('regeo', {location: ll.lng + ',' + ll.lat, extensions: 'base'})
+          .then(function(d){
+            const rg = d.regeocode || {};
+            const ac = rg.addressComponent || {};
+            res({name: rg.formattedAddress || '我的位置', ll: ll, city: ac.city || ac.province || ''});
+          })
+          .catch(function(){ res({name: '我的位置', ll: ll, city: ''}); });
+      }, byIP, {timeout: 10000, maximumAge: 60000, enableHighAccuracy: false});
+    } else {
+      byIP();
+    }
   });
 }
 
+/* 输入地名：先当 POI 找，找不到就把输入本身当城市名 */
 function genResolve(text){
-  return new Promise(function(res, rej){
-    const ps = new AMap.PlaceSearch({pageSize: 5, extensions: 'all'});
-    ps.search(text, function(st, r){
-      const pois = (st === 'complete' && r.poiList && r.poiList.pois) || [];
+  return genApi('text', {keywords: text, offset: 5, extensions: 'all'})
+    .then(function(d){
+      const pois = mapPois(d.pois);
       if(pois.length){
-        const p = pois[0];
-        return res({name: p.name || text, ll: toLL(p.location), city: p.cityname || p.adname || text});
+        // cityname 很重要：输「西湖」要能落到杭州，不能拿「西湖」当城市名去检索
+        return {name: pois[0].name, ll: pois[0].ll, city: pois[0].city || text};
       }
-      const gc = new AMap.Geocoder({});
-      gc.getLocation(text, function(s2, r2){
-        const g = (s2 === 'complete' && r2.geocodes && r2.geocodes[0]) || null;
-        if(!g) return rej(new Error('没找到「' + text + '」。试试只写城市名，比如「成都」'));
-        const ac = g.addressComponent || {};
-        res({name: text, ll: toLL(g.location), city: ac.city || ac.province || text});
-      });
+      return {name: text, ll: null, city: text};
     });
-  });
 }
 
-/* 一个城市搜几个不同词：光搜「景点」会漏掉博物馆，光搜「博物馆」会漏掉古城。
-   合并去重后交给打分去筛 */
-const GEN_KW = ['景点', '博物馆', '古城', '古镇', '公园', '寺', '故居', '步行街'];
+/* 只知道城市名、没有坐标时（IP 定位缺 rectangle 的情况），拿城市里第一个景点当锚 */
+function genCityCenter(city){
+  return genApi('text', {keywords: city, city: city, citylimit: 'true', offset: 5})
+    .then(function(d){
+      const pois = mapPois(d.pois);
+      return pois.length ? pois[0] : null;
+    });
+}
+
+/* 一个城市要哪些类型：风景名胜（含国家级/省级/寺庙）、博物馆、美术馆。
+   用 types 而不是关键词，是因为关键词一次只能搜一个词，types 一次能把整类拉回来 */
+const GEN_TYPES = '110000|140100|140300';
 
 function genSearchCity(city){
-  return new Promise(function(res){
-    const ps = new AMap.PlaceSearch({city: city, citylimit: true, pageSize: 50, extensions: 'all'});
+  const one = function(page){
+    return genApi('text', {
+      city: city, citylimit: 'true', types: GEN_TYPES,
+      offset: 25, page: page, extensions: 'all'
+    }).catch(function(){ return {pois: []}; });
+  };
+  return Promise.all([one(1), one(2)]).then(function(arr){
     const seen = {}, out = [];
-    let i = 0;
-    (function next(){
-      if(i >= GEN_KW.length) return res(out);
-      const kw = GEN_KW[i++];
-      ps.search(kw, function(st, r){
-        if(st === 'complete' && r.poiList && r.poiList.pois){
-          r.poiList.pois.forEach(function(p){
-            if(!p.id || seen[p.id]) return;
-            const name = p.name || '';
-            if(!name) return;
-            seen[p.id] = 1;
-            out.push({
-              id: p.id, name: name, type: p.type || '', ll: toLL(p.location),
-              addr: p.address || '',
-              rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
-              open: (p.biz_ext && p.biz_ext.open_time) || ''
-            });
-          });
-        }
-        next();
+    arr.forEach(function(d){
+      mapPois(d.pois).forEach(function(p){
+        if(!p.id || seen[p.id]) return;
+        seen[p.id] = 1;
+        out.push(p);
       });
-    })();
+    });
+    if(out.length) return out;
+    // 有些小城 types 搜不出东西，退回关键词再试一次
+    return genApi('text', {city: city, citylimit: 'true', keywords: '景点', offset: 25, extensions: 'all'})
+      .then(function(d){ return mapPois(d.pois); })
+      .catch(function(){ return []; });
   });
 }
 
-/* 吃饭：以景点为中心搜 1.2km 内的餐厅，取评分最高的那家。
+/* 吃饭：以景点为中心搜 1.2km 内餐厅，取评分最高的那家。
    搜不到就留着「附近挑一家」，不编一个店名出来 */
 function genEatNear(ll){
-  return new Promise(function(res){
-    const ps = new AMap.PlaceSearch({pageSize: 25, extensions: 'all'});
-    ps.searchNearBy('餐厅', [ll.lng, ll.lat], 1200, function(st, r){
-      const pois = (st === 'complete' && r.poiList && r.poiList.pois) || [];
-      const list = pois.map(function(p){
-        return {
-          name: p.name || '', ll: toLL(p.location), addr: p.address || '',
-          rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
-          cost: (p.biz_ext && p.biz_ext.cost) || ''
-        };
-      }).filter(function(p){ return p.name && p.rating >= 4; });
-      list.sort(function(a, b){ return b.rating - a.rating; });
-      res(list[0] || null);
-    });
-  });
+  return genApi('around', {
+    location: ll.lng.toFixed(6) + ',' + ll.lat.toFixed(6),
+    types: '050000', radius: 1200, offset: 25, extensions: 'all', sortrule: 'weight'
+  }).then(function(d){
+    const list = mapPois(d.pois).filter(function(p){ return p.rating >= 4; });
+    list.sort(function(a, b){ return b.rating - a.rating; });
+    return list[0] || null;
+  }).catch(function(){ return null; });
 }
 
 /* ---------- 组装 ---------- */
@@ -2638,24 +2709,29 @@ function genGo(){
   if(GEN.busy) return;
   const el = document.getElementById('gpin');
   const txt = ((el && el.value) || '').trim();
-  if(!MAP.key){
-    GEN.err = '还没有高德 Key。先关掉这个面板，点地图卡片上的「设置 Key」，服务平台选「Web端(JS API)」，填完再回来';
-    return genRender();
-  }
   GEN.busy = true; GEN.err = ''; GEN.plan = null;
   genStatus('正在解析地点…');
 
-  genPlugins()
-    .then(function(){ return txt ? genResolve(txt) : genLocate(); })
+  (txt ? genResolve(txt) : genLocate())
     .then(function(o){
-      if(!o || !o.ll) throw new Error('没拿到坐标');
+      if(!o) throw new Error('没拿到地点');
       GEN.origin = o;
-      GEN.city = o.city || txt;
-      genStatus('正在搜 ' + GEN.city + ' 的景点…');
-      return genSearchCity(GEN.city);
+      GEN.city = o.city || txt || '';
+      if(!o.ll){
+        // 只有城市名没有坐标（IP 定位没给矩形范围时会这样），拿城里第一个景点当锚
+        return genCityCenter(o.city).then(function(c){
+          if(!c) throw new Error('找不到「' + o.city + '」的位置，换个写法试试');
+          o.ll = c.ll;
+          return o;
+        });
+      }
+      return o;
     })
-    .then(function(list){
-      GEN.pois = list || [];
+    .then(function(o){
+      genStatus('正在搜 ' + (GEN.city || '当地') + ' 的景点…');
+      return genSearchCity(GEN.city).then(function(list){ GEN.pois = list || []; });
+    })
+    .then(function(){
       genStatus('筛出 ' + GEN.pois.length + ' 个候选，正在排序排线…');
       return genBuild();
     })
