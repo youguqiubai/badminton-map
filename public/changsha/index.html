@@ -2347,38 +2347,91 @@ function havKm(a, b){
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
-/* 权重表：越靠前的特征越能说明「这个地方非来不可」 */
+/* 权重表：越靠前的特征越能说明「这个地方非来不可」。
+   A 级不写在这里，单独算 —— 否则「AAAAA」会同时命中 5A 和 4A 两条规则，重复加分 */
 const GEN_BOOST = [
-  [/故宫|皇宫|皇陵|陵|长城|石窟|大佛|摩崖|布达拉|圣地/, 14, '不可复制'],
-  [/5A|AAAAA|AAAA|国家级|世界遗产|重点文物保护/i, 24, '国家级'],
-  [/博物院|博物馆|展览馆|美术馆|纪念馆/, 20, '馆藏'],
+  [/故宫|皇宫|皇陵|陵墓|王陵|陵园|十三陵|长城|石窟|大佛|摩崖|布达拉|圣地/, 14, '不可复制'],
+  /* 只认「国家级风景名胜区」这种完整表述。裸的「国家级」不算：
+     高德会给「洋湖国家湿地公园」「XX 国家级湿地公园」都打这个标，全城几十个，
+     真按 24 分算，橘子洲会被一堆湿地公园挤下去 */
+  [/世界遗产|全国重点文物保护|重点文物保护单位|国家级风景名胜区|国家级旅游度假区/, 24, '国家级'],
+  [/博物院|博物馆|展览馆|美术馆|纪念馆/, 22, '馆藏'],
   [/古城|古镇|古街|老街|历史街区|遗址|故居|书院|王府|衙署|会馆/, 16, '古迹'],
-  [/寺|庙|道观|教堂|塔|阁|楼|碑|祠/, 10, '古建'],
+  /* 高德的 level 字段实测基本都是空的，5A 只在 keytag 里；而「名山丘陵」「风景名胜区」
+     是高德对山地/名胜景区的分类词，对应的是「这座城市拿得出手的自然名片」这一档。
+     岳麓山就靠这条才上得来——它 keytag 只写了「名山丘陵」，没标 5A */
+  [/名山丘陵|风景名胜区/, 22, '名山胜景'],
+  // 「文物古迹」是高德的一个泛类，有年头的房子几乎都挂——含金量远低于「古城」「故居」，单独降档
+  [/文物古迹/, 8, '古迹'],
+  // 单体建筑（阁、楼、塔、祠）在城里遍地都是，不足以单独证明「非来不可」
+  [/寺|庙|道观|教堂|塔|阁|楼|碑|祠/, 7, '古建'],
   [/山|峰|岛|洲|湖|湿地|江|河|瀑布|峡谷|溶洞|森林/, 9, '自然'],
   [/公园|花园|园林/, 8, '园林'],
-  [/步行街|文创|艺术区|创意园/, 3, '街区']
+  [/步行街|文创|艺术区|创意园|特色街区|街区/, 3, '街区']
 ];
+
+/* 人造乐园：门票贵、可替代性强，跟「这个地方为什么非来不可」是两回事。
+   高德常把这类地方标成 5A/4A，不压一下会挤掉真正的城市名片 */
+const GEN_THEME = /海洋王国|欢乐谷|方特|水上乐园|游乐园|游乐场|野生动物园|影视城|世界之窗|主题公园|海洋馆|水族馆/;
+
+/* 广场是城市的公共空间，不是「景点」。高德给五一广场、站前广场都打了 4.7~4.8，
+   不压一下，一份长沙攻略的头几名会出现三个广场 */
+const GEN_PLAZA = /广场|站前/;
+
+/* 「湖南省博物馆」的「湖」、「名山丘陵」的「陵」都会被当成湖泊和皇陵。
+   先把名字开头的行政前缀剥掉，再让特征词去匹配，否则省名会白送自然分 */
+function genBare(name){
+  return String(name || '').replace(/^[\u4e00-\u9fa5]{2,4}(省|市|自治区|特别行政区)/, '');
+}
+
+/* 景区等级：高德有两处会写，level="AAAAA" 或者 keytag="5A景区"，取到哪个算哪个 */
+function genLevelBonus(p){
+  const lv = String(p.level || '').toUpperCase();
+  const kt = (p.keytag || '') + ' ' + (p.name || '');
+  if(/^AAAAA$/.test(lv) || /5A/.test(kt)) return 24;
+  if(/^AAAA$/.test(lv) || /4A/.test(kt)) return 14;
+  if(/^AAA$/.test(lv) || /3A/.test(kt)) return 6;
+  return 0;
+}
 
 /* 这些不是「景点」，是景点旁边的功能性设施。不剔掉会把停车场排成第一名 */
 const GEN_JUNK = /停车场|售票|入口|出口|管理处|服务中心|游客中心|咨询|派出所|有限公司|分公司|酒店|宾馆|公寓|小区|学校|学院|大学$|医院|银行|超市|便利店|地铁站|公交站|充电|加油站|厕所|洗手间|大门|售楼|中介|快递|营业厅|药房|门诊|市场$|家具|建材|五金|汽修|驾校/;
 
 function genScore(p, from){
   const name = p.name || '', type = p.type || '';
+  // 高德自己的分类标签比名字可靠：「5A景区」「文物古迹」「特色街区」都在这两个字段里
+  const hay = genBare(name) + ' ' + type + ' ' + (p.keytag || '') + ' ' + (p.level || '');
   let s = 38;
   const why = [];
-  GEN_BOOST.forEach(function(b){
-    if(b[0].test(name) || b[0].test(type)){
-      s += b[1];
-      if(why.indexOf(b[2]) < 0) why.push(b[2]);
-    }
+
+  /* 只取最重的两项，第二项减半。不封顶的话「文物古迹 + 阁 + 江」这种三项叠加
+     能把杜甫江阁顶到橘子洲头上，而「国家级 + 古迹 + 古建 + 自然」能让重建的
+     雷峰塔景区直接冲到 100 分 */
+  const hit = [];
+  GEN_BOOST.forEach(function(b){ if(b[0].test(hay)) hit.push(b); });
+  hit.sort(function(a, b){ return b[1] - a[1]; });
+  hit.forEach(function(b, i){
+    if(i === 0) s += b[1];
+    else if(i === 1) s += Math.round(b[1] / 2);
+    if(i < 2 && why.indexOf(b[2]) < 0) why.push(b[2]);
   });
+
+  const lv = genLevelBonus(p);
+  if(lv){
+    s += lv;
+    why.unshift(lv >= 24 ? '5A' : lv >= 14 ? '4A' : '3A');
+  }
   const rt = p.rating || 0;
   if(rt > 0){
-    s += Math.max(-10, Math.min(18, Math.round((rt - 3.8) * 30)));
+    /* 以 4.0 为基准：4.9 和 4.7 得拉开 5 分，否则省博和一众市级小馆会因为
+       旧公式在 4.5 以上就撞顶而全部同分，排序变成了随机 */
+    s += Math.max(-10, Math.min(23, Math.round((rt - 4.0) * 26)));
     if(rt >= 4.5) why.push('评分 ' + rt);
   }
   const d = from ? havKm(from, p.ll) : 0;
   if(d > 3) s -= Math.min(20, Math.round((d - 3) * 0.8));
+  if(GEN_THEME.test(hay)) s -= 12;
+  if(GEN_PLAZA.test(hay)) s -= 18;
   if(GEN_JUNK.test(name)) s -= 70;
   return {score: Math.max(0, Math.min(100, Math.round(s))), why: why};
 }
@@ -2523,12 +2576,18 @@ function parseLL(s){
 
 function mapPois(list){
   return (list || []).map(function(p){
+    const be = p.biz_ext || {};
+    // 高德把「5A景区 / 文物古迹 / 特色街区」放在 keytag 里，把等级放在 level 里，
+    // 比从名字里猜准得多，两个都带下去给打分用
     return {
       id: p.id, name: p.name || '', type: p.type || '', typecode: p.typecode || '',
+      keytag: p.keytag || '', level: be.level || '',
       ll: parseLL(p.location), addr: p.address || '', city: p.cityname || '',
-      rating: (p.biz_ext && parseFloat(p.biz_ext.rating)) || 0,
-      cost: (p.biz_ext && p.biz_ext.cost) || '',
-      open: (p.biz_ext && p.biz_ext.open_time) || ''
+      rating: parseFloat(be.rating) || 0,
+      cost: be.cost || '',
+      // open_time 常常是空数组，真正的营业时间在 opentime2
+      open: (typeof be.opentime2 === 'string' && be.opentime2)
+         || (typeof be.open_time === 'string' && be.open_time) || ''
     };
   }).filter(function(p){ return p.name && p.ll; });
 }
@@ -2632,6 +2691,40 @@ function genEatNear(ll){
   }).catch(function(){ return null; });
 }
 
+/* 两个名字从头开始连续相同的字数。「橘子洲头」和「橘子洲风景名胜区」是同一处，
+   可名字谁也不包含谁，只能靠这条认出来 */
+function genPrefix(a, b){
+  const n = Math.min(a.length, b.length);
+  let i = 0;
+  while(i < n && a[i] === b[i]) i++;
+  return i;
+}
+
+/* 景点去重：高德会把一个景区拆成一堆子景点，「杭州西湖风景名胜区」下面还挂着
+   曲院风荷、柳浪闻莺、花港观鱼、岳王庙。不去重的话，一份西湖攻略的前八名会全是
+   西湖的局部，等于整份攻略只排了一个地方。
+   传进来的 list 必须已按分数降序，这样留下来的才是分高的那条 */
+function genRank(list){
+  const ranked = [];
+  (list || []).forEach(function(p){
+    const n = String(p.name || '').replace(/\s/g, '');
+    const dup = ranked.some(function(k){
+      const kn = String(k.name || '').replace(/\s/g, '');
+      if(kn === n) return true;
+      // 短于 4 字的不参与包含判断，否则「西湖」会把「西湖文化广场」整个吞掉
+      if(n.length >= 4 && kn.indexOf(n) === 0) return true;
+      if(kn.length >= 4 && n.indexOf(kn) === 0) return true;
+      if(!k.ll || !p.ll) return false;
+      const far = havKm(k.ll, p.ll);
+      // 同一片景区被拆成主条目 + 子景点：前三个字一样、又挨得近，算一处
+      if(genPrefix(n, kn) >= 3 && far < 4) return true;
+      return far < 0.25;
+    });
+    if(!dup) ranked.push(p);
+  });
+  return ranked;
+}
+
 /* ---------- 组装 ---------- */
 
 function genBuild(){
@@ -2644,13 +2737,11 @@ function genBuild(){
 
   scored.sort(function(a, b){ return b.score - a.score; });
 
-  // 同名去重（高德同一个地方常有两条记录），只留分高的那条
-  const seen = {}, ranked = [];
-  scored.forEach(function(p){
-    const k = p.name.replace(/\s/g, '');
-    if(seen[k]) return;
-    seen[k] = 1; ranked.push(p);
-  });
+  /* 高德会把一个景区拆成一堆子景点：「杭州西湖风景名胜区」下面还挂着曲院风荷、
+     柳浪闻莺、花港观鱼、岳王庙……不去重的话，一份西湖攻略的前八名全是西湖的局部，
+     等于整份攻略只排了一个地方。名字有包含关系的、或者两个点几乎踩在同一处的，
+     都只留分高的那条（传进来的 list 必须已按分数降序） */
+  const ranked = genRank(scored);
   GEN.ranked = ranked.slice(0, 26);
 
   if(!GEN.ranked.length){
