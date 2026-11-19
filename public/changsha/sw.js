@@ -1,4 +1,4 @@
-const CACHE = 'cs-live-20261118j';
+const CACHE = 'cs-live-20261119a';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', function(e){

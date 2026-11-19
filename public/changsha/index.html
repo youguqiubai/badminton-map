@@ -213,6 +213,10 @@ body.dark .navbtn{background:linear-gradient(178deg,#C05B4B,#9E3E31);box-shadow:
 #mapimg.on{opacity:1}
 /* 高德静态图只有浅色一种，深色主题下压一压，别让一块白图夺走注意力 */
 body.dark #mapimg{filter:brightness(.86) contrast(1.06) saturate(.9)}
+/* 没有后端时的点位示意图：不叠底图，只按经纬度铺点，所以不需要任何图源 */
+#mapsvg{position:absolute;inset:0;display:none}
+#mapsvg.on{display:block}
+#mapsvg svg{display:block;width:100%;height:100%}
 .mapmsg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
   text-align:center;padding:20px;font-size:12px;color:var(--ink3);line-height:1.8;background:var(--card2)}
 .mapmsg.on{display:flex}
@@ -434,7 +438,7 @@ footer{text-align:center;font-size:11.5px;color:var(--ink3);margin-top:22px;padd
     <button class="mapopen" id="mapopen" type="button">
       <b id="mapopenT">看今天这几个点在哪儿</b><span>点开 →</span>
     </button>
-    <div id="map"><img id="mapimg" alt="这一天的行程点分布"><div class="mapmsg" id="mapmsg"></div></div>
+    <div id="map"><img id="mapimg" alt="这一天的行程点分布"><div id="mapsvg"></div><div class="mapmsg" id="mapmsg"></div></div>
     <div class="mapbar">
       <span id="mapinfo">地图</span>
       <button id="mapfit">看全程</button>
@@ -2074,7 +2078,7 @@ function mapMarks(plan){
     const g = resolveGeo(x);
     if(!g) return;
     x._g = g;
-    out.push({ll: g, color: markColor(), size: 'large'});
+    out.push({ll: g, color: markColor(), size: 'large', name: cleanName(x.name)});
   });
   // 你现在站在哪，单独一个绿点。GPS 可能还是上一座城的，离得远就不画
   const dc = CITY[dayCity].center;
@@ -2115,18 +2119,162 @@ function mapURL(center, zoom, marks, w){
   return GEN_API + 'static?' + q.join('&');
 }
 
-function mapLoad(url){
+/* ---------- 没有后端时画一张示意图 ----------
+   GitHub Pages 那份是纯静态托管，出不了高德静态图，以前这里只留一句「要服务器支持」，
+   等于空着。改成按经纬度本地铺点：不叠底图就不需要任何图源，离线也能画出来，
+   至少能看出今天这几个点互相在什么方位。 */
+function svgText(v){
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function mapSVG(marks){
+  const W = mapW(), H = MAP_H;
+  const list = (marks || []).filter(function(m){
+    return m && m.ll && isFinite(m.ll.lng) && isFinite(m.ll.lat);
+  });
+  if(!list.length) return '';
+
+  let minLng = 999, maxLng = -999, minLat = 999, maxLat = -999;
+  list.forEach(function(m){
+    minLng = Math.min(minLng, m.ll.lng); maxLng = Math.max(maxLng, m.ll.lng);
+    minLat = Math.min(minLat, m.ll.lat); maxLat = Math.max(maxLat, m.ll.lat);
+  });
+
+  const midLat = (minLat + maxLat) / 2;
+  const cosLat = Math.cos(midLat * Math.PI / 180) || 1;
+  // 只有一个点、或几个点完全重合时给个最小跨度，否则算出来是 0
+  const lngSpan = Math.max(maxLng - minLng, 0.0012);
+  const latSpan = Math.max(maxLat - minLat, 0.0012);
+  const padX = 26, padY = 36;
+
+  // 横向 1° 经度 = k 像素，纵向 1° 纬度 = k/cosLat 像素；取小的那个保证全都框在图里。
+  // 乘 0.78 是给下面的排斥留出余量，否则点一散开就顶到边框上
+  const k = Math.min((W - padX * 2) / lngSpan, (H - padY * 2) * cosLat / latSpan) * 0.78;
+  const cl = (minLng + maxLng) / 2, ca = (minLat + maxLat) / 2;
+  const px = function(m){ return W / 2 + (m.ll.lng - cl) * k; };
+  const py = function(m){ return H / 2 - (m.ll.lat - ca) * k / cosLat; };
+
+  // 五一商圈那几个点挨得太近，按真实坐标画下去会叠成一个黑团，
+  // 做几十轮排斥把它们拉开 —— 相对方位还在，只是不再米级精确
+  const pts = list.map(function(m){ return {m: m, x: px(m), y: py(m)}; });
+  const MIN = 30, EDGE = 18;
+  for(let it = 0; it < 90; it++){
+    let moved = false;
+    for(let i = 0; i < pts.length; i++){
+      for(let j = i + 1; j < pts.length; j++){
+        let dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
+        let d = Math.sqrt(dx * dx + dy * dy);
+        if(d < 0.01){ dx = (i - j) * 0.7; dy = 0.6; d = Math.sqrt(dx * dx + dy * dy); }
+        if(d < MIN){
+          const s = (MIN - d) / d / 2;
+          pts[i].x -= dx * s; pts[i].y -= dy * s;
+          pts[j].x += dx * s; pts[j].y += dy * s;
+          moved = true;
+        }
+      }
+    }
+    pts.forEach(function(p){
+      p.x = Math.max(EDGE, Math.min(W - EDGE, p.x));
+      p.y = Math.max(EDGE + 4, Math.min(H - EDGE, p.y));
+    });
+    if(!moved) break;
+  }
+
+  // 行程点按顺序虚线连起来；「我」不参与连线，单独一个绿点
+  const walk = pts.filter(function(p){ return !p.m.me; });
+  let line = '';
+  if(walk.length > 1){
+    line = 'M' + walk.map(function(p){
+      return p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+    }).join(' L ');
+  }
+
+  const shortName = function(m){
+    const n = String(m.name || '').split(/[·→/]/)[0].trim()
+      .replace(/（[^）]*）/g, '')
+      .replace(/^打车去/, '')
+      .trim();
+    if(/酒店/.test(n)) return '酒店';
+    return n.length > 6 ? n.slice(0, 6) : n;
+  };
+
+  // 文字基线 y 上方 9px 到下方 3px 是它占的高度，横着按 6 个字算
+  const HALF = 30;
+  const placed = [];
+  const hits = function(x, y){
+    return pts.some(function(q){
+      return Math.abs(q.x - x) < HALF + 9 && Math.abs(q.y - y) < 13;
+    }) || placed.some(function(q){
+      return Math.abs(q.x - x) < HALF * 2 && Math.abs(q.y - y) < 15;
+    });
+  };
+
+  let body = '', idx = 0;
+  pts.forEach(function(p){
+    const m = p.m, x = p.x, y = p.y;
+    const on = !m.me;
+    if(on) idx++;
+    const fill = m.me ? '#2E7D4F' : String(m.color || '#B33A2B').replace(/^0x/i, '#');
+    // 名字优先放点的下方，下面挤就翻到上方，两头都不行就不画 —— 宁可少一个，不要糊成一片
+    let ly = on ? y + 23 : null;
+    if(on){
+      if(ly > H - 8 || hits(x, ly)){
+        const up = y - 13;
+        ly = (up > 12 && !hits(x, up)) ? up : null;
+      }
+      if(ly != null) placed.push({x: x, y: ly});
+    }
+    const label = (ly != null)
+      ? '<text x="' + x.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" '
+        + 'font-size="10.5" fill="var(--ink2)">' + svgText(shortName(m)) + '</text>'
+      : '';
+    body += '<g>'
+      + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (on ? 10 : 7) + '" '
+      + 'fill="' + fill + '" stroke="var(--card)" stroke-width="2"/>'
+      + (on
+        ? '<text x="' + x.toFixed(1) + '" y="' + (y + 3.6).toFixed(1) + '" text-anchor="middle" '
+          + 'font-size="10.5" font-weight="700" fill="#fff">' + idx + '</text>'
+        : '')
+      + label
+      + '</g>';
+  });
+
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" '
+    + 'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="当天行程点分布示意图">'
+    + (line
+      ? '<path d="' + line + '" fill="none" stroke="var(--ink3)" stroke-width="1.4" '
+        + 'stroke-dasharray="4 4" opacity=".45" stroke-linejoin="round"/>'
+      : '')
+    + body
+    + '<text x="' + (W - 10) + '" y="' + (H - 9) + '" text-anchor="end" font-size="9.5" '
+    + 'fill="var(--ink3)" opacity=".75">示意图 · 无底图</text>'
+    + '</svg>';
+}
+
+function mapSvgShow(marks){
+  const box = document.getElementById('mapsvg');
   const img = document.getElementById('mapimg');
   const msg = document.getElementById('mapmsg');
+  if(!box) return;
+  box.innerHTML = mapSVG(marks);
+  box.classList.add('on');
+  if(img) img.classList.remove('on');
+  if(msg) msg.classList.remove('on');
+}
+
+function mapLoad(url, marks){
+  const img = document.getElementById('mapimg');
+  const msg = document.getElementById('mapmsg');
+  const box = document.getElementById('mapsvg');
   if(!img) return;
   if(!url){
     img.classList.remove('on');
-    if(msg){
-      msg.textContent = '这张地图要服务器支持。打开 http://121.43.173.154/changsha/ 就能看到';
-      msg.classList.add('on');
-    }
+    mapSvgShow(marks);
     return;
   }
+  if(box) box.classList.remove('on');
   const seq = ++MAP.seq;
   const pre = new Image();
   // 先预载，load 完再换 src，否则会闪一下上一张图
@@ -2139,10 +2287,8 @@ function mapLoad(url){
   pre.onerror = function(){
     if(seq !== MAP.seq) return;
     img.classList.remove('on');
-    if(msg){
-      msg.textContent = '地图没出来，可能是高德的日配额用完了。点右下角「在高德里打开」一样能看';
-      msg.classList.add('on');
-    }
+    // 配额用完、或者上游挂了：退回示意图，别让这块地方只剩一句报错
+    mapSvgShow(marks);
   };
   pre.src = url;
 }
@@ -2156,7 +2302,7 @@ function mapShow(center, zoom, marks){
       + '&name=' + encodeURIComponent(CITY[cityOf(state.day)].name)
       + '&coordinate=gaode&callnative=0';
   }
-  mapLoad(mapURL(center, zoom, marks, mapW()));
+  mapLoad(mapURL(center, zoom, marks, mapW()), marks);
 }
 
 /* 把这一天的点全都框进来 */
